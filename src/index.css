@@ -1,0 +1,557 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Cinzel', Georgia, serif;
+  --font-brand: 'Cinzel', Georgia, serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+:root,
+html,
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-brand,
+.font-serif {
+  font-family: 'Cinzel', Georgia, serif;
+  letter-spacing: 0.03em;
+}
+
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif !important;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+@layer base {
+  :root {
+    /* Titanium & Rose Gold — Refined Jewellery Foundry Palette */
+    --theme-bg-light: #F4F4F6;
+    --theme-bg-dark: #1E1E24;
+    --theme-card-light: #FFFFFF;
+    --theme-card-dark: #292930;
+    --theme-primary: #E07A5F;
+    --theme-secondary: #E8998D;
+    --theme-text-main-light: #27272A;
+    --theme-text-sec-light: #71717A;
+    --theme-text-main-dark: #F4F4F6;
+    --theme-text-sec-dark: #A1A1AA;
+    --theme-border-light: #D4D4D8;
+    --theme-border-dark: #3F3F46;
+    --theme-success: #7A9B76;
+    --theme-warning: #C58B5A;
+    --theme-critical: #A8556B;
+    --theme-info: #8B7A82;
+  }
+
+  body {
+    background-color: #1E1E24;
+    color: #F4F4F6;
+  }
+}
+
+/* =========================================================
+   TITANIUM & ROSE GOLD — REFINED JEWELLERY FOUNDRY PALETTE
+   Primary: #E07A5F (Warm Rose Gold / Terracotta Foundry Accent)
+   Secondary: #E8998D (Lighter Rose Gold / Copper Tint)
+   Dark BG: #1E1E24 (Deep Titanium Charcoal)
+   Dark Card: #292930 (Forged Titanium Grey)
+   Light BG: #F4F4F6 (Polished Titanium Mist)
+   Light Card: #FFFFFF (Pure Lustre White)
+   Main Text: #27272A (Light) / #F4F4F6 (Dark)
+   Secondary Text: #71717A (Light) / #A1A1AA (Dark)
+   Border: #D4D4D8 (Light) / #3F3F46 (Dark)
+   Success: #7A9B76
+   Warning: #C58B5A
+   Critical: #A8556B
+   Info: #8B7A82
+   ========================================================= */
+
+/* Dark Mode (Default) Overrides to match Refined Foundry Palette */
+html:not(.theme-bright) {
+  background-color: #1E1E24;
+  color: #F4F4F6;
+}
+
+html:not(.theme-bright) body {
+  background-color: #1E1E24;
+  color: #F4F4F6;
+}
+
+/* Dark surfaces mapped to #1E1E24 and #292930 */
+html:not(.theme-bright) .bg-\[\#0c0c0e\],
+html:not(.theme-bright) .bg-\[\#09090b\],
+html:not(.theme-bright) .bg-neutral-950 {
+  background-color: #1E1E24 !important;
+  color: #F4F4F6 !important;
+}
+
+html:not(.theme-bright) .bg-\[\#121214\],
+html:not(.theme-bright) .bg-\[\#121212\],
+html:not(.theme-bright) .bg-\[\#18181b\],
+html:not(.theme-bright) .bg-\[\#1e1e22\],
+html:not(.theme-bright) .bg-\[\#242427\],
+html:not(.theme-bright) .bg-neutral-900 {
+  background-color: #292930 !important;
+  color: #F4F4F6 !important;
+}
+
+html:not(.theme-bright) .bg-neutral-800 {
+  background-color: #34343D !important;
+  color: #F4F4F6 !important;
+}
+
+/* Dark mode titanium borders */
+html:not(.theme-bright) .border-neutral-800,
+html:not(.theme-bright) .border-neutral-800\/80,
+html:not(.theme-bright) .border-neutral-800\/60,
+html:not(.theme-bright) .border-neutral-700,
+html:not(.theme-bright) .border-neutral-700\/80,
+html:not(.theme-bright) .border-\[\#2c2c30\] {
+  border-color: #3F3F46 !important;
+}
+
+/* Dark mode texts */
+html:not(.theme-bright) .text-neutral-100,
+html:not(.theme-bright) .text-neutral-200 {
+  color: #F4F4F6 !important;
+}
+
+html:not(.theme-bright) .text-neutral-300 {
+  color: #E4E4E7 !important;
+}
+
+html:not(.theme-bright) .text-neutral-400 {
+  color: #A1A1AA !important;
+}
+
+html:not(.theme-bright) .text-neutral-500 {
+  color: #71717A !important;
+}
+
+/* =========================================================
+   LIGHT / BRIGHT MODE: #F4F4F6 Background, #FFFFFF Cards
+   Main text #27272A, Secondary #71717A, Border #D4D4D8
+   ========================================================= */
+.theme-bright,
+[data-theme="bright"] {
+  color-scheme: light;
+}
+
+.theme-bright body,
+html.theme-bright {
+  background-color: #F4F4F6 !important;
+  color: #27272A !important;
+}
+
+/* Light Background surfaces */
+.theme-bright .bg-\[\#121214\],
+.theme-bright .bg-\[\#0c0c0e\],
+.theme-bright .bg-\[\#09090b\],
+.theme-bright .bg-neutral-950 {
+  background-color: #F4F4F6 !important;
+  color: #27272A !important;
+}
+
+/* Light Card surfaces */
+.theme-bright .bg-\[\#18181b\],
+.theme-bright .bg-\[\#121212\],
+.theme-bright .bg-\[\#1e1e22\],
+.theme-bright .bg-\[\#242427\],
+.theme-bright .bg-neutral-900 {
+  background-color: #FFFFFF !important;
+  color: #27272A !important;
+}
+
+.theme-bright .bg-neutral-900\/90,
+.theme-bright .bg-neutral-950\/90,
+.theme-bright .bg-neutral-900\/95,
+.theme-bright .bg-neutral-950\/95 {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+}
+
+.theme-bright .bg-neutral-900\/80,
+.theme-bright .bg-neutral-950\/80 {
+  background-color: rgba(255, 255, 255, 0.90) !important;
+}
+
+.theme-bright .bg-neutral-900\/50,
+.theme-bright .bg-neutral-950\/50,
+.theme-bright .bg-neutral-900\/40,
+.theme-bright .bg-neutral-900\/30 {
+  background-color: #EBEBEF !important;
+}
+
+.theme-bright .bg-neutral-800 {
+  background-color: #EBEBEF !important;
+  color: #27272A !important;
+}
+
+.theme-bright .bg-neutral-800\/80,
+.theme-bright .bg-neutral-800\/60,
+.theme-bright .bg-neutral-800\/50,
+.theme-bright .bg-neutral-800\/40,
+.theme-bright .bg-neutral-800\/30 {
+  background-color: #F4F4F6 !important;
+}
+
+/* Light mode Titanium grey borders */
+.theme-bright .border-neutral-800,
+.theme-bright .border-neutral-800\/80,
+.theme-bright .border-neutral-800\/60,
+.theme-bright .border-neutral-800\/50,
+.theme-bright .border-neutral-700,
+.theme-bright .border-neutral-700\/80,
+.theme-bright .border-neutral-700\/60,
+.theme-bright .border-\[\#2c2c30\] {
+  border-color: #D4D4D8 !important;
+}
+
+/* Light mode Typography: Main #27272A & Secondary #71717A */
+.theme-bright .text-neutral-100,
+.theme-bright .text-neutral-200 {
+  color: #27272A !important;
+}
+
+/* Ensure text-white always stays crisp white on dark pills/buttons in bright mode */
+.theme-bright .text-white,
+.theme-bright [class*="text-white"] {
+  color: #FFFFFF !important;
+}
+
+.theme-bright .text-neutral-300 {
+  color: #3F3F46 !important;
+}
+
+.theme-bright .text-neutral-400 {
+  color: #71717A !important;
+}
+
+.theme-bright .text-neutral-500 {
+  color: #71717A !important;
+}
+
+/* Light mode Hover states */
+.theme-bright .hover\:bg-neutral-800:hover {
+  background-color: #EBEBEF !important;
+}
+
+.theme-bright .hover\:bg-neutral-700:hover {
+  background-color: #E4E4E7 !important;
+}
+
+.theme-bright .hover\:border-neutral-700:hover {
+  border-color: #D4D4D8 !important;
+}
+
+/* Inputs in Light Mode */
+.theme-bright input[type="text"],
+.theme-bright input[type="password"],
+.theme-bright input[type="number"],
+.theme-bright input[type="search"],
+.theme-bright select,
+.theme-bright textarea {
+  background-color: #FFFFFF !important;
+  color: #27272A !important;
+  border-color: #D4D4D8 !important;
+}
+
+.theme-bright input::placeholder {
+  color: #71717A !important;
+}
+
+/* Android frame outer canvas */
+.theme-bright.min-h-screen,
+.theme-bright .bg-\[\#09090b\] {
+  background-color: #E4E4E7 !important;
+}
+
+/* =========================================================
+   PRIMARY ACCENTS: ROSE GOLD & COPPER (#E07A5F, #E8998D)
+   Map former amber gold accents to refined Rose Gold / Copper
+   ========================================================= */
+/* Amber text mapped to Primary Rose Gold #E07A5F or Secondary #E8998D */
+.text-amber-400,
+.text-amber-500 {
+  color: #E07A5F !important;
+}
+
+.text-amber-300 {
+  color: #E8998D !important;
+}
+
+.text-amber-600 {
+  color: #C86349 !important;
+}
+
+/* Rose Gold / Copper Buttons & Primary Actions */
+.bg-amber-400,
+.bg-amber-500,
+.from-amber-400,
+.from-amber-500 {
+  background-color: #E07A5F !important;
+  color: #FFFFFF !important;
+}
+
+.to-amber-500,
+.to-amber-600 {
+  --tw-gradient-to: #C86349 !important;
+}
+
+.from-amber-500 {
+  --tw-gradient-from: #E07A5F !important;
+}
+
+.hover\:bg-amber-300:hover,
+.hover\:bg-amber-400:hover,
+.hover\:from-amber-400:hover {
+  background-color: #E8998D !important;
+}
+
+/* Active navigation pill & soft highlights */
+.bg-amber-400\/20,
+.bg-amber-500\/20,
+.bg-amber-500\/10,
+.bg-amber-400\/10 {
+  background-color: rgba(224, 122, 95, 0.16) !important;
+  color: #E07A5F !important;
+}
+
+.border-amber-400,
+.border-amber-500,
+.border-amber-500\/30,
+.border-amber-500\/40,
+.border-amber-500\/60,
+.focus\:border-amber-400:focus,
+.focus\:border-amber-500:focus {
+  border-color: #E07A5F !important;
+}
+
+.ring-amber-500\/30,
+.ring-amber-500\/40 {
+  --tw-ring-color: rgba(224, 122, 95, 0.35) !important;
+}
+
+/* =========================================================
+   SYSTEM STATUS COLORS SPECIFIED:
+   Success:  #7A9B76
+   Warning:  #C58B5A
+   Critical: #A8556B
+   Info:     #8B7A82
+   ========================================================= */
+/* Success (#7A9B76) */
+.bg-emerald-500,
+.bg-emerald-600 {
+  background-color: #7A9B76 !important;
+}
+.text-emerald-400,
+.text-emerald-500,
+.text-emerald-300 {
+  color: #7A9B76 !important;
+}
+.border-emerald-500,
+.border-emerald-500\/30,
+.border-emerald-500\/40 {
+  border-color: #7A9B76 !important;
+}
+.bg-emerald-950\/30,
+.bg-emerald-950\/40,
+.bg-emerald-500\/10,
+.bg-emerald-500\/20 {
+  background-color: rgba(122, 155, 118, 0.16) !important;
+}
+
+/* Warning (#C58B5A) */
+.bg-yellow-500,
+.bg-yellow-600 {
+  background-color: #C58B5A !important;
+}
+.text-yellow-400,
+.text-yellow-300,
+.text-yellow-500 {
+  color: #C58B5A !important;
+}
+.border-yellow-500,
+.border-yellow-500\/40 {
+  border-color: #C58B5A !important;
+}
+
+/* Critical (#A8556B) */
+.bg-red-500,
+.bg-red-600 {
+  background-color: #A8556B !important;
+}
+.text-red-400,
+.text-red-300,
+.text-red-500 {
+  color: #A8556B !important;
+}
+.border-red-500,
+.border-red-500\/30,
+.border-red-500\/40 {
+  border-color: #A8556B !important;
+}
+.bg-red-950\/30,
+.bg-red-950\/40,
+.bg-red-500\/10,
+.bg-red-500\/20 {
+  background-color: rgba(168, 85, 107, 0.16) !important;
+}
+
+/* Info (#8B7A82) */
+.text-sky-400,
+.text-blue-400,
+.text-blue-300 {
+  color: #8B7A82 !important;
+}
+.bg-blue-500,
+.bg-blue-600 {
+  background-color: #8B7A82 !important;
+}
+.border-blue-500,
+.border-blue-500\/30,
+.border-blue-500\/40 {
+  border-color: #8B7A82 !important;
+}
+.bg-blue-500\/10,
+.bg-blue-500\/20 {
+  background-color: rgba(139, 122, 130, 0.16) !important;
+}
+
+/* =========================================================
+   TABLES: TITANIUM GREY + SUBTLE METALLIC ACCENTS
+   ========================================================= */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table thead th {
+  background: linear-gradient(180deg, rgba(63, 63, 70, 0.35) 0%, rgba(41, 41, 48, 0.6) 100%);
+  color: #A1A1AA;
+  border-bottom: 1px solid #3F3F46;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.theme-bright table thead th {
+  background: linear-gradient(180deg, #F4F4F6 0%, #E4E4E7 100%) !important;
+  color: #71717A !important;
+  border-bottom: 1px solid #D4D4D8 !important;
+}
+
+table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+table tbody tr:hover {
+  background-color: rgba(224, 122, 95, 0.06) !important;
+}
+
+/* Subtle metallic accent shimmer on table header and card borders */
+.metallic-card {
+  position: relative;
+  background: linear-gradient(145deg, #292930 0%, #222228 100%);
+  border: 1px solid #3F3F46;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.theme-bright .metallic-card {
+  background: linear-gradient(145deg, #FFFFFF 0%, #F8F8FA 100%) !important;
+  border: 1px solid #D4D4D8 !important;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Text selection in Rose Gold */
+::selection {
+  background-color: #E07A5F !important;
+  color: #FFFFFF !important;
+}
+
+/* Print Styles */
+@media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Completely hide all interactive UI elements, navigation, and modal chrome */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* Make sure modal overlays do not mask or tint the printed page */
+  .fixed.inset-0 {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+  }
+
+  .printable-slip-wrapper {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .printable-slip-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 4mm 6mm !important;
+    box-shadow: none !important;
+    border: 1.5px solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
+  }
+
+  .printable-slip-container table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    border: 1px solid #000000 !important;
+  }
+
+  .printable-slip-container th,
+  .printable-slip-container td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    padding: 4px 8px !important;
+  }
+
+  .printable-slip-container img,
+  .printable-slip-container svg {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 6mm 8mm;
+  }
+}
+

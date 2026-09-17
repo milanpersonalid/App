@@ -1,0 +1,6 @@
+{
+  "name": "Shreenathji Imitation — Android App",
+  "description": "Native Android job-work tracker for ring designs, production lots, karigars, 7-step stage cycles, dynamic QR stage slips, weight discrepancy checks, ready stock, and 3-mode scanner.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
