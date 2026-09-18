@@ -49,7 +49,7 @@ export interface Design {
   name: string;
   orderRef: string;
   photoUrl: string;
-  targetQuantity: number;
+  targetQuantity?: number;
   lowStockThreshold: number; // default 500, editable per design
   barcode: string;           // permanent barcode, e.g. "DES-82910"
   averageWeightPerPiece: number; // in grams (Sample weight ÷ Sample piece count)

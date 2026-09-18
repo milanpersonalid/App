@@ -24,7 +24,7 @@ interface AppContextType {
     name: string;
     orderRef: string;
     photoUrl: string;
-    targetQuantity: number;
+    targetQuantity?: number;
     lowStockThreshold: number;
     sampleWeight: number;
     samplePieceCount: number;
@@ -152,12 +152,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [karigars]);
 
-  // CREATE ORDER (DESIGN)
+  // CREATE DESIGN
   const createDesign = async (data: {
     name: string;
     orderRef: string;
     photoUrl: string;
-    targetQuantity: number;
+    targetQuantity?: number;
     lowStockThreshold: number;
     sampleWeight: number;
     samplePieceCount: number;

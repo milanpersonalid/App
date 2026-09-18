@@ -10,10 +10,52 @@
 
 :root,
 html,
-body {
+body,
+#root {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+}
+
+/* Hide scrollbars globally for authentic Android mobile experience */
+*, *::before, *::after {
+  box-sizing: border-box;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Zero Horizontal Scroll Guarantee across all views, pop-ups, and modals */
+html, body, #root, .fixed, .relative {
+  max-width: 100vw;
+}
+
+img, svg, canvas, video {
+  max-width: 100%;
+}
+
+p, span, h1, h2, h3, h4, h5, h6, label, div, button {
+  overflow-wrap: break-word;
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0px;
+  height: 0px;
+  background: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .font-brand,

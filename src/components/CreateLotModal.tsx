@@ -10,7 +10,6 @@ import {
   RefreshCw,
   UserCheck,
   Package,
-  QrCode,
   Tag,
   Info,
   Check,
@@ -143,9 +142,9 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
       : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto no-print">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
-        className={`relative w-full max-w-xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-4 border transition-colors flex flex-col max-h-[92vh] ${
+        className={`relative w-full max-w-xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-4 border transition-colors flex flex-col max-h-[92vh] max-w-full ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-[#18181B] border-[#27272A] text-neutral-100'
@@ -175,15 +174,8 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                   isBright ? 'text-[#18181B]' : 'text-white'
                 }`}
               >
-                Create Production Lot
+                Create Lot
               </h3>
-              <p
-                className={`text-xs ${
-                  isBright ? 'text-[#71717A]' : 'text-neutral-400'
-                }`}
-              >
-                Initialize workshop batch &amp; generate dynamic QR tracking slip
-              </p>
             </div>
           </div>
           <button
@@ -200,7 +192,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-5 overflow-y-auto overflow-x-hidden w-full max-w-full">
           {error && (
             <div
               className={`p-3.5 text-xs sm:text-sm rounded-xl border flex items-start gap-2.5 font-medium ${
@@ -297,13 +289,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
               >
                 Linked Ring Design <span className="text-amber-500">*</span>
               </label>
-              <span
-                className={`text-[11px] font-medium ${
-                  isBright ? 'text-[#64748B]' : 'text-neutral-400'
-                }`}
-              >
-                Permanent Catalog Model
-              </span>
             </div>
 
             <select
@@ -374,7 +359,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                         isBright ? 'text-[#64748B]' : 'text-neutral-400'
                       }`}
                     >
-                      Ref: {selectedDesign.orderRef || 'Standard Batch'}
+                      Code: {selectedDesign.orderRef || 'Standard Batch'}
                     </span>
                   </div>
                 </div>
@@ -569,33 +554,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                 </span>
               </div>
             )}
-          </div>
-
-          {/* Section 5: Dynamic QR Smart Slip Notice */}
-          <div
-            className={`p-3.5 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed ${
-              isBright
-                ? 'bg-amber-50/90 border-amber-200 text-amber-950'
-                : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
-            }`}
-          >
-            <div
-              className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-                isBright ? 'bg-amber-200/80 text-amber-900' : 'bg-amber-500/20 text-amber-400'
-              }`}
-            >
-              <QrCode className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-semibold block text-xs">
-                Dynamic QR &amp; Physical Tracking Slip:
-              </span>
-              <p className={`mt-0.5 text-[11.5px] ${isBright ? 'text-amber-900/80' : 'text-amber-200/70'}`}>
-                Creating this lot immediately generates a printable/scannable production slip encoded with{' '}
-                <strong className="font-semibold">{lotNumber || 'this lot'}</strong>, starting stage{' '}
-                <strong className="font-semibold">{startingStage}</strong>, and assigned karigar.
-              </p>
-            </div>
           </div>
 
           {/* Action Buttons */}

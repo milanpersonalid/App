@@ -134,9 +134,9 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({ lot, design, onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
-        className={`relative w-full max-w-3xl rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden my-4 transition-colors flex flex-col max-h-[95vh] ${
+        className={`relative w-full max-w-3xl rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden overflow-x-hidden my-4 max-w-full transition-colors flex flex-col max-h-[95vh] ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-[#18181B] border-[#27272A] text-neutral-100'
@@ -301,13 +301,13 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({ lot, design, onC
 
         {/* PRINTABLE SLIP BODY - FAITHFULLY MATCHING PHYSICAL SLIP IMAGE */}
         <div
-          className={`printable-slip-wrapper p-4 sm:p-6 overflow-y-auto flex-1 ${
+          className={`printable-slip-wrapper p-3 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 w-full max-w-full ${
             isBright ? 'bg-[#F1F5F9]' : 'bg-[#09090B]'
           }`}
         >
           <div
             id="stage-slip-print"
-            className="printable-slip-container bg-white text-black p-5 sm:p-7 border-2 border-black font-sans max-w-xl mx-auto shadow-md"
+            className="printable-slip-container bg-white text-black p-4 sm:p-7 border-2 border-black font-sans w-full max-w-xl mx-auto shadow-md overflow-hidden"
             style={{
               fontFamily:
                 'system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans Gujarati", "Shruti", sans-serif',

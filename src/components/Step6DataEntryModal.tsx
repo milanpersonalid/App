@@ -130,9 +130,9 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto no-print">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
-        className={`relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden my-6 transition-colors ${
+        className={`relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden my-6 max-w-full transition-colors ${
           isBright
             ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
             : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'

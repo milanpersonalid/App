@@ -41,9 +41,9 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
   const isReadyStock = lot.status === 'ready_stock';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto no-print">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
-        className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors ${
+        className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors max-w-full ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-neutral-900 border-neutral-700 text-neutral-100'
@@ -54,7 +54,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
           className={`flex items-center justify-between px-6 py-4 border-b ${
             isBright
               ? 'bg-[#FAFAFA] border-[#E4E4E7]'
-              : 'bg-neutral-950 border-neutral-800'
+              : 'bg-neutral-900 border-neutral-800'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden w-full max-w-full">
           {/* STATUS NOTIFICATION BANNERS */}
           {isArrivedAwaitingEntry && (
             <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs flex items-center justify-between gap-3 animate-pulse">

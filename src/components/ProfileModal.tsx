@@ -10,10 +10,8 @@ import {
   Edit2,
   Check,
   KeyRound,
-  Sparkles,
 } from 'lucide-react';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
-import { useApp } from '../context/AppContext';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -27,7 +25,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onOpenSettings,
 }) => {
   const { currentUser, logout, updateProfile, theme } = useAuthAndTheme();
-  const { lots, designs } = useApp();
   const isBright = theme === 'bright';
 
   const [isEditing, setIsEditing] = useState(false);
@@ -46,13 +43,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     setIsEditing(false);
   };
 
-  const activeLotsCount = lots.filter((l) => l.status !== 'ready_stock').length;
-  const readyLotsCount = lots.filter((l) => l.status === 'ready_stock').length;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs overflow-y-auto overflow-x-hidden w-full max-w-full animate-in fade-in duration-150">
       <div
-        className={`relative w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden my-4 transition-colors duration-200 ${
+        className={`relative w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden my-4 max-w-full transition-colors duration-200 ${
           isBright
             ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
             : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'
@@ -247,44 +241,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <span className="text-[#7A9B76] font-semibold text-[11px] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#7A9B76]" /> Full Admin Auth
               </span>
-            </div>
-          </div>
-
-          {/* Factory Activity Metrics */}
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            <div className={`p-2.5 rounded-xl border text-center ${isBright ? 'bg-[#F4F4F6] border-[#D4D4D8]' : 'bg-[#1E1E24] border-[#3F3F46]'}`}>
-              <span className={`text-[10px] block uppercase font-medium ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>Designs</span>
-              <span className="text-base font-bold font-mono">{designs.length}</span>
-            </div>
-            <div className={`p-2.5 rounded-xl border text-center ${isBright ? 'bg-[#F4F4F6] border-[#D4D4D8]' : 'bg-[#1E1E24] border-[#3F3F46]'}`}>
-              <span className={`text-[10px] block uppercase font-medium ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>Active Lots</span>
-              <span className="text-base font-bold text-[#E07A5F] font-mono">{activeLotsCount}</span>
-            </div>
-            <div className={`p-2.5 rounded-xl border text-center ${isBright ? 'bg-[#F4F4F6] border-[#D4D4D8]' : 'bg-[#1E1E24] border-[#3F3F46]'}`}>
-              <span className={`text-[10px] block uppercase font-medium ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>Ready Stock</span>
-              <span className="text-base font-bold text-[#7A9B76] font-mono">{readyLotsCount}</span>
-            </div>
-          </div>
-
-          {/* Authorized Roles & Permissions */}
-          <div className="mt-3.5">
-            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1.5 ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
-              Assigned Permissions ({currentUser.permissions.length})
-            </span>
-            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-              {currentUser.permissions.map((perm, idx) => (
-                <span
-                  key={idx}
-                  className={`px-2 py-0.5 rounded-md border text-[10px] flex items-center gap-1 ${
-                    isBright
-                      ? 'bg-[#F4F4F6] border-[#D4D4D8] text-[#27272A]'
-                      : 'bg-[#1E1E24] border-[#3F3F46] text-[#E4E4E7]'
-                  }`}
-                >
-                  <Sparkles className="w-2.5 h-2.5 text-[#E07A5F]" />
-                  {perm}
-                </span>
-              ))}
             </div>
           </div>
 

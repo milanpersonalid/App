@@ -36,7 +36,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'designs', label: 'Designs (Orders)', icon: <Sparkles className="w-4 h-4" /> },
+    { id: 'designs', label: 'Designs', icon: <Sparkles className="w-4 h-4" /> },
     {
       id: 'lots',
       label: 'Production Lots',
@@ -84,13 +84,13 @@ export const Navigation: React.FC<NavigationProps> = ({
             <span className="hidden md:inline">Create Lot</span>
           </button>
 
-          {/* Create Order (Design) */}
+          {/* Create Design */}
           <button
             onClick={onOpenCreateDesign}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold border border-neutral-700 transition active:scale-95"
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="hidden md:inline">Create Order</span>
+            <span className="hidden md:inline">Create Design</span>
           </button>
 
           {/* Reset Demo Data Helper */}
@@ -109,8 +109,8 @@ export const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       {/* Tabs Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex overflow-x-auto no-scrollbar border-t border-neutral-800/60">
-        <div className="flex gap-1 py-1.5 min-w-max">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 flex overflow-x-hidden border-t border-neutral-800/60 w-full">
+        <div className="flex flex-wrap sm:flex-nowrap gap-1 py-1.5 w-full">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (

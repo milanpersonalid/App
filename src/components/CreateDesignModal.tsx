@@ -4,10 +4,8 @@ import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import {
   X,
   Plus,
-  Calculator,
   Image as ImageIcon,
   Sparkles,
-  Barcode,
   Upload,
   RefreshCw,
   Info,
@@ -29,26 +27,17 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
-  const generateOrderRef = () =>
-    `ORD-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+  const generateDesignCode = () =>
+    `DSG-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
   const [name, setName] = useState('');
-  const [orderRef, setOrderRef] = useState<string>(generateOrderRef);
-  const [targetQuantity, setTargetQuantity] = useState<string>('1500');
+  const [orderRef, setOrderRef] = useState<string>(generateDesignCode);
   const [lowStockThreshold, setLowStockThreshold] = useState<string>('500'); // default 500
   const [sampleWeight, setSampleWeight] = useState<string>('150.0');
   const [samplePieceCount, setSamplePieceCount] = useState<string>('100');
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  // Sample photo generator presets
-  const samplePresets = [
-    { label: 'Floral Solitaire', color: '#f59e0b' },
-    { label: 'Kundan Band', color: '#eab308' },
-    { label: 'Micro-Pave', color: '#fbbf24' },
-    { label: 'Carved Peacock', color: '#d97706' },
-  ];
 
   // Auto-calculate average weight per piece
   const avgWeight = useMemo(() => {
@@ -68,13 +57,6 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
         setPhotoUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePresetSelect = (preset: { label: string; color: string }) => {
-    setPhotoUrl(getSampleRingPhoto(preset.label, preset.color));
-    if (!name) {
-      setName(`Royal ${preset.label} Ring`);
     }
   };
 
@@ -98,7 +80,6 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
         name: name.trim(),
         orderRef: orderRef.trim(),
         photoUrl: finalPhoto,
-        targetQuantity: parseInt(targetQuantity, 10) || 1000,
         lowStockThreshold: parseInt(lowStockThreshold, 10) || 500,
         sampleWeight: parseFloat(sampleWeight) || 150,
         samplePieceCount: parseInt(samplePieceCount, 10) || 100,
@@ -106,15 +87,15 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
 
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'Failed to create design order');
+      setError(err.message || 'Failed to create design');
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto no-print">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
-        className={`relative w-full max-w-xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-4 border transition-colors flex flex-col max-h-[92vh] ${
+        className={`relative w-full max-w-xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-4 border transition-colors flex flex-col max-h-[92vh] max-w-full ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-[#18181B] border-[#27272A] text-neutral-100'
@@ -144,15 +125,8 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
                   isBright ? 'text-[#18181B]' : 'text-white'
                 }`}
               >
-                Create Order / Design Model
+                Create Design
               </h3>
-              <p
-                className={`text-xs ${
-                  isBright ? 'text-[#71717A]' : 'text-neutral-400'
-                }`}
-              >
-                Register catalog ring, establish baseline weight &amp; auto-generate barcode
-              </p>
             </div>
           </div>
           <button
@@ -169,7 +143,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-5 overflow-y-auto overflow-x-hidden w-full max-w-full">
           {error && (
             <div
               className={`p-3.5 text-xs sm:text-sm rounded-xl border flex items-start gap-2.5 font-medium ${
@@ -183,7 +157,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
             </div>
           )}
 
-          {/* Section 1: Design Identity & Order Reference */}
+          {/* Section 1: Design Identity & Code */}
           <div className="space-y-4">
             {/* Design Name */}
             <div>
@@ -208,62 +182,49 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
               />
             </div>
 
-            {/* Order Ref & Target Quantity */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+            {/* Design Code */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
                 <label
-                  className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+                  className={`block text-xs font-semibold uppercase tracking-wider ${
                     isBright ? 'text-[#3F3F46]' : 'text-neutral-300'
                   }`}
                 >
-                  Order Reference <span className="text-amber-500">*</span>
+                  Design Code <span className="text-amber-500">*</span>
                 </label>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    required
-                    value={orderRef}
-                    onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
-                    className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border font-mono text-sm uppercase outline-none font-semibold transition ${
-                      isBright
-                        ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-500/30'
-                        : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setOrderRef(generateOrderRef())}
-                    title="Generate new order reference"
-                    className={`absolute right-2 p-1.5 rounded-lg transition ${
-                      isBright
-                        ? 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2E8F0]'
-                        : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                    }`}
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </div>
+                <span
+                  className={`text-[11px] font-mono ${
+                    isBright ? 'text-[#64748B]' : 'text-neutral-400'
+                  }`}
+                >
+                  Catalog / Mould Ref
+                </span>
               </div>
-
-              <div>
-                <label
-                  className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
-                    isBright ? 'text-[#3F3F46]' : 'text-neutral-300'
-                  }`}
-                >
-                  Target Quantity (pcs)
-                </label>
+              <div className="relative flex items-center">
                 <input
-                  type="number"
-                  min="1"
-                  value={targetQuantity}
-                  onChange={(e) => setTargetQuantity(e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${
+                  type="text"
+                  required
+                  placeholder="e.g. DSG-2024-501 or FS-101"
+                  value={orderRef}
+                  onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
+                  className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border font-mono text-sm uppercase outline-none font-semibold transition ${
                     isBright
                       ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-500/30'
                       : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setOrderRef(generateDesignCode())}
+                  title="Generate new design code"
+                  className={`absolute right-2 p-1.5 rounded-lg transition ${
+                    isBright
+                      ? 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#E2E8F0]'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                  }`}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -343,32 +304,6 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
                 : 'bg-amber-500/5 border-amber-500/25'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div
-                className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${
-                  isBright ? 'text-amber-900' : 'text-amber-400'
-                }`}
-              >
-                <Calculator className="w-4 h-4" />
-                <span>Sample Count &bull; Baseline Avg Weight</span>
-              </div>
-              <span
-                className={`text-[11px] font-medium ${
-                  isBright ? 'text-amber-800/80' : 'text-amber-400/80'
-                }`}
-              >
-                Permanent Formula
-              </span>
-            </div>
-            <p
-              className={`text-[11.5px] leading-relaxed ${
-                isBright ? 'text-amber-950/80' : 'text-neutral-300'
-              }`}
-            >
-              Average piece weight = Sample weight &divide; Sample piece count. This baseline
-              automatically powers loss/gain calculations across all production stages.
-            </p>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label
@@ -496,67 +431,8 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
                   />
                 </label>
 
-                <div>
-                  <span
-                    className={`block text-[11px] mb-1.5 font-medium ${
-                      isBright ? 'text-[#64748B]' : 'text-neutral-400'
-                    }`}
-                  >
-                    Or select quick sample preset:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {samplePresets.map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => handlePresetSelect(preset)}
-                        className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition ${
-                          isBright
-                            ? 'bg-white hover:bg-amber-50 text-[#334155] border-[#CBD5E1] hover:border-amber-400 hover:text-amber-900'
-                            : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border-neutral-700 hover:text-amber-300'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Image file upload */}
               </div>
-            </div>
-          </div>
-
-          {/* Section 5: Auto Barcode Notice */}
-          <div
-            className={`p-3.5 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed ${
-              isBright
-                ? 'bg-slate-50 border-slate-200 text-slate-700'
-                : 'bg-neutral-900/80 border-neutral-800 text-neutral-400'
-            }`}
-          >
-            <div
-              className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-                isBright
-                  ? 'bg-slate-200 text-slate-800'
-                  : 'bg-neutral-800 text-neutral-300'
-              }`}
-            >
-              <Barcode className="w-4 h-4" />
-            </div>
-            <div>
-              <span
-                className={`font-semibold block text-xs ${
-                  isBright ? 'text-[#0F172A]' : 'text-white'
-                }`}
-              >
-                Permanent Catalog Barcode:
-              </span>
-              <p className="mt-0.5 text-[11.5px]">
-                Upon creation, a permanent barcode (e.g.{' '}
-                <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
-                  DES-XXXXXX
-                </span>
-                ) is instantly generated for immediate barcode scanning across workshop lots and dispatch.
-              </p>
             </div>
           </div>
 
@@ -583,7 +459,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
               className="px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-neutral-950 shadow-md shadow-amber-500/20 transition flex items-center gap-2 disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
-              <span>{isSubmitting ? 'Generating Design...' : 'Save & Generate Barcode'}</span>
+              <span>{isSubmitting ? 'Saving Design...' : 'Save Design & Generate Barcode'}</span>
             </button>
           </div>
         </form>

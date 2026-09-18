@@ -97,7 +97,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
           {/* Left Drawer / Menu Dropdown */}
           {menuOpen && (
             <div
-              className={`absolute left-0 top-12 w-64 rounded-2xl border shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs ${
+              className={`absolute left-0 top-12 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs overflow-hidden ${
                 isBright
                   ? 'bg-white border-[#E7E5E4] text-[#1C1917]'
                   : 'bg-[#292623] border-[#44403C] text-[#F5F5F4]'
@@ -169,7 +169,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-[#C5A059]" />
-                <span>Create New Design Order</span>
+                <span>Create Design</span>
               </button>
 
               <div className={`my-1.5 border-t ${isBright ? 'border-[#E7E5E4]' : 'border-[#44403C]'}`} />
@@ -270,7 +270,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
             </span>
             <span
               className={`text-[8px] sm:text-[9px] font-semibold tracking-[0.22em] uppercase mt-0.5 leading-none ${
-                isBright ? 'text-[#9F7D57]' : 'text-[#C5A059]'
+                isBright ? 'text-[#8C5338]' : 'text-[#C5A059]'
               }`}
             >
               Imitation
@@ -315,7 +315,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
             {/* Notification Dropdown */}
             {notifOpen && (
               <div
-                className={`absolute right-0 top-11 w-72 rounded-2xl border shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs ${
+                className={`absolute right-0 top-11 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs overflow-hidden ${
                   isBright
                     ? 'bg-white border-[#E7E5E4] text-[#1C1917]'
                     : 'bg-[#292623] border-[#44403C] text-[#F5F5F4]'
@@ -381,9 +381,9 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
 
       {/* Android About / System Dialog */}
       {showAboutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in overflow-y-auto overflow-x-hidden w-full max-w-full">
           <div
-            className={`w-full max-w-sm rounded-3xl border p-6 shadow-2xl space-y-4 ${
+            className={`w-full max-w-sm rounded-3xl border p-6 shadow-2xl space-y-4 max-w-full ${
               isBright
                 ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
                 : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'
@@ -392,7 +392,11 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
             <div className="flex items-center gap-3">
               <AppLogoIcon size="lg" className="shadow-lg shadow-[#E07A5F]/20" />
               <div>
-                <h3 className="text-base font-bold font-brand">
+                <h3
+                  className={`text-base font-bold font-brand transition-colors ${
+                    isBright ? 'text-[#18181B]' : 'text-[#F4F4F6]'
+                  }`}
+                >
                   Shreenathji Imitation
                 </h3>
                 <p className="text-xs text-[#E07A5F] font-mono">

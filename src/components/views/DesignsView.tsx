@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { Design } from '../../types';
 import { generateBarcodeSvg } from '../../utils/qrBarcode';
 import {
@@ -24,6 +25,8 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
   onOpenCreateLotWithDesign,
 }) => {
   const { designs, recalibrateDesign, updateLowStockThreshold } = useApp();
+  const { theme } = useAuthAndTheme();
+  const isBright = theme === 'bright';
   const [searchQuery, setSearchQuery] = useState('');
 
   // Inline recalibration state
@@ -63,13 +66,13 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 overflow-x-hidden w-full max-w-full">
       {/* Top Header & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-neutral-100 font-brand flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-400" />
-            Ring Designs &bull; Orders
+            Designs
           </h2>
         </div>
 
@@ -88,13 +91,13 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
             onClick={onOpenCreateDesign}
             className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 transition"
           >
-            <Plus className="w-4 h-4" /> Create Order
+            <Plus className="w-4 h-4" /> Create Design
           </button>
         </div>
       </div>
 
-      {/* Designs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* Designs Mobile List */}
+      <div className="flex flex-col gap-3.5">
         {filteredDesigns.map((design) => {
           const barcodeSvg = generateBarcodeSvg(design.barcode, 20);
 
@@ -104,41 +107,61 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
           return (
             <div
               key={design.id}
-              className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col justify-between space-y-4 hover:border-neutral-700 transition shadow-lg"
+              className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-3.5 transition shadow-sm ${
+                isBright
+                  ? 'bg-white border-[#E4E4E7] hover:border-amber-400'
+                  : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700'
+              }`}
             >
               <div>
                 {/* Header: Photo & Title */}
-                <div className="flex items-start gap-4 mb-3">
+                <div className="flex items-start gap-3 mb-2.5">
                   <img
                     src={design.photoUrl}
                     alt={design.name}
-                    className="w-20 h-20 rounded-xl object-cover border border-neutral-700 flex-shrink-0"
+                    className={`w-16 h-16 rounded-xl object-cover border flex-shrink-0 ${
+                      isBright ? 'border-[#E2E8F0]' : 'border-neutral-700'
+                    }`}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-mono text-amber-400 font-semibold">
+                      <span className="text-[11px] font-mono text-amber-500 font-semibold">
                         {design.orderRef}
                       </span>
                     </div>
-                    <h3 className="font-bold text-base text-neutral-100 truncate mt-0.5">
+                    <h3
+                      className={`font-bold text-sm truncate mt-0.5 ${
+                        isBright ? 'text-[#0F172A]' : 'text-neutral-100'
+                      }`}
+                    >
                       {design.name}
                     </h3>
 
                     {/* Permanent Barcode Display */}
-                    <div className="mt-2 px-2 py-1 rounded-lg bg-white inline-flex flex-col items-center justify-center max-w-[130px] overflow-hidden border border-neutral-200/60 shadow-xs">
+                    <div className="mt-1.5 px-2 py-1 rounded-lg bg-white inline-flex flex-col items-center justify-center max-w-[130px] overflow-hidden border border-neutral-200/80 shadow-xs">
                       <div className="w-full flex justify-center overflow-hidden" dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
                     </div>
                   </div>
                 </div>
 
                 {/* Key Spec Metrics */}
-                <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-neutral-900 border border-neutral-800/80 text-xs">
+                <div
+                  className={`grid grid-cols-2 gap-2 p-2.5 rounded-xl border text-xs ${
+                    isBright
+                      ? 'bg-[#F8FAFC] border-[#E2E8F0]'
+                      : 'bg-neutral-900 border-neutral-800/80'
+                  }`}
+                >
                   {/* Baseline Average Weight per Piece */}
                   <div>
-                    <span className="text-neutral-400 block text-[11px]">
+                    <span
+                      className={`block text-[10px] ${
+                        isBright ? 'text-slate-500' : 'text-neutral-400'
+                      }`}
+                    >
                       Baseline Avg Weight / Piece
                     </span>
-                    <span className="font-mono font-bold text-sm text-amber-300">
+                    <span className="font-mono font-bold text-xs text-amber-500">
                       {design.averageWeightPerPiece.toFixed(4)} g
                     </span>
                   </div>
@@ -146,25 +169,35 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                   {/* Low Stock Alert Threshold */}
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-400 text-[11px]">Low Stock Alert</span>
+                      <span
+                        className={`text-[10px] ${
+                          isBright ? 'text-slate-500' : 'text-neutral-400'
+                        }`}
+                      >
+                        Low Stock Alert
+                      </span>
                       <button
                         onClick={() => {
                           setEditingThresholdId(design.id);
                           setNewThresholdValue(design.lowStockThreshold.toString());
                         }}
-                        className="text-[10px] text-amber-400 hover:underline"
+                        className="text-[10px] text-amber-500 font-medium hover:underline"
                       >
                         Edit
                       </button>
                     </div>
 
                     {isEditingThreshold ? (
-                      <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         <input
                           type="number"
                           value={newThresholdValue}
                           onChange={(e) => setNewThresholdValue(e.target.value)}
-                          className="w-16 px-1.5 py-0.5 rounded bg-neutral-950 border border-amber-500 text-xs font-mono text-neutral-100"
+                          className={`w-16 px-1.5 py-0.5 rounded border text-xs font-mono ${
+                            isBright
+                              ? 'bg-white border-amber-500 text-[#0F172A]'
+                              : 'bg-neutral-950 border-amber-500 text-neutral-100'
+                          }`}
                         />
                         <button
                           onClick={() => handleSaveThreshold(design.id)}
@@ -174,7 +207,11 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                         </button>
                       </div>
                     ) : (
-                      <span className="font-mono font-bold text-sm text-neutral-200">
+                      <span
+                        className={`font-mono font-bold text-xs ${
+                          isBright ? 'text-[#0F172A]' : 'text-neutral-200'
+                        }`}
+                      >
                         {design.lowStockThreshold} pcs
                       </span>
                     )}
@@ -224,16 +261,24 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
               </div>
 
               {/* Bottom Actions */}
-              <div className="flex items-center justify-between pt-3 border-t border-neutral-900 text-xs">
+              <div
+                className={`flex items-center justify-between pt-3 border-t text-xs ${
+                  isBright ? 'border-[#E2E8F0]' : 'border-neutral-900'
+                }`}
+              >
                 <button
                   onClick={() => {
                     setRecalibratingDesignId(design.id);
                     setRecalWeight(design.sampleWeight.toString());
                     setRecalPieces(design.samplePieceCount.toString());
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium transition"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+                    isBright
+                      ? 'bg-[#F1F5F9] hover:bg-[#E2E8F0] text-slate-700'
+                      : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                  }`}
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
                   Recalibrate
                 </button>
 

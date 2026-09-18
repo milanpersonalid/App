@@ -23,19 +23,25 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
-  // If not framed (e.g. user toggled off or on real mobile phone), render 100% edge-to-edge
+  // If not framed (e.g. on real mobile phone), render authentic mobile viewport centered with max-w-[430px]
   if (!isFramed) {
     return (
       <div
-        className={`min-h-screen w-full flex flex-col justify-between font-sans transition-colors duration-200 ${
-          isBright ? 'bg-[#F4F4F6] text-[#27272A] theme-bright' : 'bg-[#1E1E24] text-[#F4F4F6]'
+        className={`h-screen w-full max-w-full flex items-center justify-center overflow-x-hidden overflow-y-hidden transition-colors duration-200 ${
+          isBright ? 'bg-[#E4E4E7] theme-bright' : 'bg-[#18181D]'
         }`}
       >
-        <AndroidStatusBar />
-        <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
-          {children}
+        <div
+          className={`h-full w-full max-w-[min(430px,100vw)] flex flex-col justify-between font-sans overflow-x-hidden overflow-y-hidden relative shadow-2xl transition-colors duration-200 ${
+            isBright ? 'bg-[#F4F4F6] text-[#27272A] theme-bright' : 'bg-[#1E1E24] text-[#F4F4F6]'
+          }`}
+        >
+          <AndroidStatusBar />
+          <div className="flex-1 flex flex-col min-h-0 relative overflow-x-hidden overflow-y-hidden w-full max-w-full">
+            {children}
+          </div>
+          <AndroidSystemNavBar onBack={onBack} onHome={onHome} onRecents={onRecents} />
         </div>
-        <AndroidSystemNavBar onBack={onBack} onHome={onHome} onRecents={onRecents} />
       </div>
     );
   }
@@ -43,16 +49,16 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
   // Framed view for desktop / tablet previews: renders authentic Android smartphone
   return (
     <div
-      className={`min-h-screen w-full flex flex-col items-center justify-center p-2 sm:p-6 select-none font-sans overflow-x-hidden transition-colors duration-200 ${
+      className={`h-screen max-h-screen w-full max-w-full flex flex-col items-center justify-center p-2 sm:p-3 select-none font-sans overflow-x-hidden overflow-y-hidden transition-colors duration-200 ${
         isBright ? 'bg-[#E4E4E7] theme-bright' : 'bg-[#18181D]'
       }`}
     >
       {/* Top Ambient Bar for Desktop Viewers */}
-      <div className="w-full max-w-[430px] mb-3 flex items-center justify-between text-xs px-2">
+      <div className="w-full max-w-[min(420px,calc(100vw-1.5rem))] mb-2 flex items-center justify-between text-xs px-2 shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#7A9B76] animate-pulse" />
           <span
-            className={`font-mono text-[11px] font-semibold ${
+            className={`font-mono text-[11px] font-semibold truncate ${
               isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'
             }`}
           >
@@ -63,7 +69,7 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
 
       {/* Smartphone Chassis */}
       <div
-        className={`relative w-full max-w-[420px] h-[92vh] max-h-[890px] rounded-[46px] p-3 flex flex-col transition-all duration-200 ${
+        className={`relative w-full max-w-[min(420px,calc(100vw-1.5rem))] h-[calc(100vh-3.25rem)] max-h-[860px] rounded-[46px] p-3 flex flex-col transition-all duration-200 shrink min-h-0 overflow-visible ${
           isBright
             ? 'bg-[#FFFFFF] shadow-[0_20px_50px_rgba(0,0,0,0.12),0_10px_20px_rgba(0,0,0,0.06)] border-[4px] border-[#D4D4D8]'
             : 'bg-[#292930] shadow-[0_0_60px_rgba(0,0,0,0.85),0_20px_40px_rgba(0,0,0,0.6)] border-[4px] border-[#3F3F46] ring-1 ring-white/10'
@@ -71,20 +77,20 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
       >
         {/* Device Physical Buttons (Exterior Styling) */}
         <div
-          className={`absolute -left-[7px] top-28 w-[3px] h-12 rounded-l-sm ${
+          className={`absolute -left-[6px] top-28 w-[3px] h-12 rounded-l-sm pointer-events-none ${
             isBright ? 'bg-[#D4D4D8]' : 'bg-[#3F3F46]'
           }`}
         />
         <div
-          className={`absolute -left-[7px] top-44 w-[3px] h-12 rounded-l-sm ${
+          className={`absolute -left-[6px] top-44 w-[3px] h-12 rounded-l-sm pointer-events-none ${
             isBright ? 'bg-[#D4D4D8]' : 'bg-[#3F3F46]'
           }`}
         />
-        <div className="absolute -right-[7px] top-32 w-[3px] h-14 bg-[#E07A5F] rounded-r-sm" />
+        <div className="absolute -right-[6px] top-32 w-[3px] h-14 bg-[#E07A5F] rounded-r-sm pointer-events-none" />
 
         {/* Screen Display Container */}
         <div
-          className={`w-full h-full rounded-[38px] flex flex-col overflow-hidden relative shadow-inner transition-colors duration-200 ${
+          className={`w-full h-full rounded-[38px] flex flex-col overflow-x-hidden overflow-y-hidden relative shadow-inner transition-colors duration-200 max-w-full ${
             isBright ? 'bg-[#F4F4F6] text-[#27272A]' : 'bg-[#1E1E24] text-[#F4F4F6]'
           }`}
         >
@@ -97,7 +103,7 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
           <AndroidStatusBar />
 
           {/* Screen Content Body */}
-          <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 relative overflow-x-hidden overflow-y-hidden w-full max-w-full">
             {children}
           </div>
 

@@ -54,7 +54,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
   });
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -64,7 +64,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
             }`}
           >
             <Layers className="w-5 h-5 text-amber-500" />
-            Production Lots Tracker
+            Lots Tracker
           </h2>
         </div>
 
@@ -72,17 +72,17 @@ export const LotsView: React.FC<LotsViewProps> = ({
           onClick={onOpenCreateLot}
           className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 transition"
         >
-          <Plus className="w-4 h-4" /> Create Production Lot
+          <Plus className="w-4 h-4" /> Create Lot
         </button>
       </div>
 
       {/* Filters Bar */}
       <div
-        className={`p-4 rounded-2xl border space-y-3 transition-colors ${
+        className={`p-3 rounded-xl border space-y-2.5 transition-colors ${
           isBright ? 'bg-white border-[#E4E4E7]' : 'bg-neutral-950 border-neutral-800'
         }`}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="flex flex-col gap-2">
           {/* Search */}
           <div className="relative">
             <Search
@@ -103,48 +103,49 @@ export const LotsView: React.FC<LotsViewProps> = ({
             />
           </div>
 
-          {/* Stage Filter */}
-          <select
-            value={stageFilter}
-            onChange={(e) => setStageFilter(e.target.value)}
-            className={`px-3.5 py-2 rounded-xl border text-xs outline-none transition ${
-              isBright
-                ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
-                : 'bg-neutral-900 border-neutral-800 text-neutral-200 focus:border-amber-500'
-            }`}
-          >
-            <option value="all">All Stages</option>
-            <option value="Wax">Wax</option>
-            <option value="Casting">Casting</option>
-            <option value="Buff">Buff</option>
-            <option value="Zabora">Zabora</option>
-            <option value="Dal">Dal</option>
-            <option value="Chhol">Chhol</option>
-            <option value="Plating">Plating</option>
-            <option value="Ready Stock">Ready Stock</option>
-          </select>
+          {/* Filters Row */}
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs outline-none transition ${
+                isBright
+                  ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
+                  : 'bg-neutral-900 border-neutral-800 text-neutral-200 focus:border-amber-500'
+              }`}
+            >
+              <option value="all">All Stages</option>
+              <option value="Wax">Wax</option>
+              <option value="Casting">Casting</option>
+              <option value="Buff">Buff</option>
+              <option value="Zabora">Zabora</option>
+              <option value="Dal">Dal</option>
+              <option value="Chhol">Chhol</option>
+              <option value="Plating">Plating</option>
+              <option value="Ready Stock">Ready Stock</option>
+            </select>
 
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={`px-3.5 py-2 rounded-xl border text-xs outline-none transition ${
-              isBright
-                ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
-                : 'bg-neutral-900 border-neutral-800 text-neutral-200 focus:border-amber-500'
-            }`}
-          >
-            <option value="all">All Statuses</option>
-            <option value="in_progress">In Progress (With Karigar)</option>
-            <option value="arrived_awaiting_entry">Arrived, Awaiting Entry (Red)</option>
-            <option value="stage_complete">Stage Complete (Green)</option>
-            <option value="ready_stock">Ready Stock</option>
-          </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs outline-none transition ${
+                isBright
+                  ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
+                  : 'bg-neutral-900 border-neutral-800 text-neutral-200 focus:border-amber-500'
+              }`}
+            >
+              <option value="all">All Statuses</option>
+              <option value="in_progress">In Progress</option>
+              <option value="arrived_awaiting_entry">Arrived (Red)</option>
+              <option value="stage_complete">Complete (Green)</option>
+              <option value="ready_stock">Ready Stock</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Lots List Table / Cards */}
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {filteredLots.length === 0 ? (
           <div
             className={`p-8 rounded-2xl border text-center text-xs ${
@@ -168,7 +169,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
             return (
               <div
                 key={lot.id}
-                className={`p-4 sm:p-5 rounded-2xl border transition flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm ${
+                className={`p-3 rounded-xl border transition flex flex-col justify-between gap-3 shadow-sm ${
                   isBright
                     ? 'bg-white border-[#E4E4E7] hover:border-slate-300'
                     : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700'

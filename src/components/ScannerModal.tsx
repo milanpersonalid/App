@@ -185,8 +185,8 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto no-print">
-      <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden my-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
+      <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden overflow-x-hidden my-4 max-w-full">
         {/* Header Bar */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950">
           <div className="flex items-center gap-2.5">
@@ -211,7 +211,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
         </div>
 
         {/* 3 MODE TABS */}
-        <div className="grid grid-cols-3 p-2 bg-neutral-950 border-b border-neutral-800 gap-1 text-xs">
+        <div className="grid grid-cols-3 p-1.5 sm:p-2 bg-neutral-950 border-b border-neutral-800 gap-1 text-xs w-full overflow-hidden">
           <button
             onClick={() => {
               setMode('confirm_arrival');
@@ -470,7 +470,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                           <div className="flex-1 space-y-1">
                             <h4 className="font-bold text-sm text-neutral-100">{d.name}</h4>
                             <div className="text-neutral-400 text-[11px]">
-                              Order Ref: <span className="font-mono text-neutral-200">{d.orderRef}</span> &bull;
+                              Code: <span className="font-mono text-neutral-200">{d.orderRef}</span> &bull;
                               Avg Wt: <span className="font-mono text-amber-300">{d.averageWeightPerPiece}g</span>
                             </div>
                             {onSelectDesign && (
@@ -565,7 +565,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                             <div>
                               <h4 className="font-semibold text-xs text-neutral-100">{design.name}</h4>
                               <div className="text-[10px] text-neutral-400 font-mono">
-                                Barcode: {design.barcode} &bull; Ref: {design.orderRef}
+                                Barcode: {design.barcode} &bull; Code: {design.orderRef}
                               </div>
                             </div>
                           </div>

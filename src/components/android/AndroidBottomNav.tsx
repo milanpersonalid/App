@@ -48,7 +48,7 @@ export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
 
   return (
     <nav
-      className={`h-16 flex-shrink-0 w-full px-2 flex items-center justify-around select-none z-40 relative border-t transition-colors duration-200 ${
+      className={`h-16 flex-shrink-0 w-full max-w-full overflow-x-hidden px-2 flex items-center justify-around select-none z-40 relative border-t transition-colors duration-200 ${
         isBright
           ? 'bg-[#FFFFFF] border-[#D4D4D8]'
           : 'bg-[#292930] border-[#3F3F46]'

@@ -41,12 +41,12 @@ const MainApp: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
-  // Device frame toggle (on desktop screens, defaults to true so it looks like an authentic Android smartphone)
+  // Dedicated Android App: on screens wider than 430px, always render the authentic smartphone chassis; on real mobile phones (<=430px), fit edge-to-edge
   const [isFramed, setIsFramed] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return window.innerWidth >= 640;
+      return window.innerWidth > 430;
     }
-    return false;
+    return true;
   });
 
   // Profile and Settings Modals
@@ -84,12 +84,10 @@ const MainApp: React.FC = () => {
     undefined
   );
 
-  // Auto-adapt on screen resize
+  // Maintain smartphone frame on any desktop/tablet viewport, edge-to-edge on real phones
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 640) {
-        setIsFramed(false);
-      }
+      setIsFramed(window.innerWidth > 430);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -185,7 +183,7 @@ const MainApp: React.FC = () => {
       {!isLoggedIn ? (
         <LoginScreen />
       ) : (
-        <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden w-full">
+        <div className="flex-1 flex flex-col min-h-0 relative overflow-x-hidden overflow-y-hidden w-full max-w-full">
           {/* Android Top App Bar with Profile and quick actions */}
           <AndroidTopAppBar
             onOpenScanner={() => handleOpenScannerWithMode('confirm_arrival')}
@@ -200,7 +198,7 @@ const MainApp: React.FC = () => {
 
           {/* Main Android App Screen Content */}
           <div
-            className={`flex-1 w-full min-h-0 overflow-y-auto px-3.5 py-4 pb-36 no-print transition-colors duration-200 ${
+            className={`flex-1 w-full max-w-full min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar px-3.5 py-4 pb-36 no-print transition-colors duration-200 ${
               isBright ? 'bg-[#FAF7F2]' : 'bg-[#1E1C1A]'
             }`}
           >

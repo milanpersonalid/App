@@ -43,9 +43,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const isBright = theme === 'bright';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs overflow-y-auto overflow-x-hidden w-full max-w-full animate-in fade-in duration-150">
       <div
-        className={`relative w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden my-4 transition-colors duration-200 ${
+        className={`relative w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden my-4 max-w-full transition-colors duration-200 ${
           isBright
             ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
             : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'
@@ -287,7 +287,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center gap-3">
               <AppLogoIcon size="md" />
               <div>
-                <div className="font-bold font-brand">
+                <div
+                  className={`font-bold font-brand transition-colors ${
+                    isBright ? 'text-[#18181B]' : 'text-[#F4F4F6]'
+                  }`}
+                >
                   Shreenathji Imitation
                 </div>
                 <div className={`text-[10px] ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>

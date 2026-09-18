@@ -111,7 +111,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     filteredStages.length;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 overflow-x-hidden w-full max-w-full">
       {/* LUXURY WORKSHOP SEARCH & FILTER */}
       <div className="pt-0.5">
         {/* SEARCH & FILTER BAR */}
@@ -225,7 +225,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2.5">
             {filteredAwaitingLots.map((lot) => {
               const design = designs.find((d) => d.id === lot.designId);
               const lastRec = lot.history[lot.history.length - 1];
@@ -325,7 +325,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2.5">
             {filteredStageCompleteLots.map((lot) => {
               const design = designs.find((d) => d.id === lot.designId);
               const lastRec = lot.history[lot.history.length - 1];
@@ -435,7 +435,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="flex flex-col gap-3">
             {filteredStages.map((stage) => {
             const { working, idle } = getKarigarStatusForStage(stage);
             const stageLots = lots.filter(
@@ -455,7 +455,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div
                 key={stage}
                 onClick={() => onSelectStage(stage)}
-                className={`group relative p-5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${
+                className={`group relative p-3.5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${
                   isBright
                     ? 'bg-white border-[#D4D4D8] hover:border-[#E07A5F] hover:shadow-md'
                     : 'bg-[#292930] border-[#3F3F46] hover:border-[#E07A5F]/60 hover:bg-[#34343D]'

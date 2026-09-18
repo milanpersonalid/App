@@ -62,7 +62,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
   const lowStockCount = stockItems.filter((s) => s.isLowStock).length;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -80,11 +80,8 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
             >
               <Archive className="w-5 h-5" />
             </div>
-            <span>Ready Stock Inventory</span>
+            <span>Ready Stock</span>
           </h2>
-          <p className={`text-xs mt-1 ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
-            Dual-branch finished goods warehouse tracking (Plain vs. Gold Plated)
-          </p>
         </div>
 
         {lowStockCount > 0 && (
@@ -102,11 +99,11 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
       </div>
 
       {/* 2 Dedicated Stock Category Buckets */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-2 gap-2">
         {/* Bucket 1: Ready Stock (Plain) */}
         <div
           onClick={() => setActiveBucket(activeBucket === 'plain' ? 'all' : 'plain')}
-          className={`p-4.5 rounded-2xl border cursor-pointer transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-sm active:scale-[0.99] ${
+          className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-sm active:scale-[0.99] ${
             activeBucket === 'plain'
               ? isBright
                 ? 'bg-[#F1F5F9] border-[#94A3B8] ring-1 ring-[#94A3B8]/40'
@@ -116,50 +113,45 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
               : 'bg-[#292930] border-[#3F3F46] hover:border-[#52525B]'
           }`}
         >
-          <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center justify-between mb-1.5">
             <span
-              className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider border ${
+              className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
                 isBright
                   ? 'bg-[#E2E8F0] text-[#334155] border-[#CBD5E1]'
                   : 'bg-[#1E293B] text-[#94A3B8] border-[#334155]'
               }`}
             >
-              Bucket 1 &bull; Plain
-            </span>
-            <span className={`text-[11px] ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
-              Finished at Chhol
+              Plain
             </span>
           </div>
 
-          <h3 className={`text-base font-bold font-brand ${isBright ? 'text-[#1E293B]' : 'text-neutral-100'}`}>
-            Ready Stock (Plain)
+          <h3 className={`text-xs font-bold font-brand truncate ${isBright ? 'text-[#1E293B]' : 'text-neutral-100'}`}>
+            Ready (Plain)
           </h3>
 
-          <div className="mt-3.5 grid grid-cols-2 gap-3 pt-2.5 border-t border-dashed border-[#CBD5E1]/60 dark:border-[#334155]">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 pt-1.5 border-t border-dashed border-[#CBD5E1]/60 dark:border-[#334155]">
             <div>
-              <span className={`block text-[11px] ${isBright ? 'text-[#64748B]' : 'text-neutral-400'}`}>
-                Total Pieces
+              <span className={`block text-[10px] ${isBright ? 'text-[#64748B]' : 'text-neutral-400'}`}>
+                Pieces
               </span>
               <span
-                className={`text-xl font-bold font-mono tracking-tight ${
+                className={`text-sm font-bold font-mono tracking-tight ${
                   isBright ? 'text-[#1E293B]' : 'text-neutral-100'
                 }`}
               >
                 {plainTotalPieces.toLocaleString()}
-                <span className="text-xs font-normal text-[#64748B] ml-1">pcs</span>
               </span>
             </div>
             <div>
-              <span className={`block text-[11px] ${isBright ? 'text-[#64748B]' : 'text-neutral-400'}`}>
-                Total Weight
+              <span className={`block text-[10px] ${isBright ? 'text-[#64748B]' : 'text-neutral-400'}`}>
+                Weight
               </span>
               <span
-                className={`text-lg font-bold font-mono tracking-tight ${
+                className={`text-sm font-bold font-mono tracking-tight ${
                   isBright ? 'text-[#334155]' : 'text-neutral-200'
                 }`}
               >
-                {plainTotalWeight.toFixed(2)}
-                <span className="text-xs font-normal text-[#64748B] ml-1">g</span>
+                {plainTotalWeight.toFixed(1)}g
               </span>
             </div>
           </div>
@@ -168,7 +160,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
         {/* Bucket 2: Ready Stock (Gold) */}
         <div
           onClick={() => setActiveBucket(activeBucket === 'gold' ? 'all' : 'gold')}
-          className={`p-4.5 rounded-2xl border cursor-pointer transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-sm active:scale-[0.99] ${
+          className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-sm active:scale-[0.99] ${
             activeBucket === 'gold'
               ? isBright
                 ? 'bg-[#FAF7F2] border-[#D6C7B2] ring-1 ring-[#D6C7B2]/50'
@@ -178,50 +170,45 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
               : 'bg-[#292930] border-[#3F3F46] hover:border-[#52525B]'
           }`}
         >
-          <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center justify-between mb-1.5">
             <span
-              className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md uppercase tracking-wider border ${
+              className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
                 isBright
                   ? 'bg-[#F2EAE0] text-[#6B5330] border-[#DECFC0]'
                   : 'bg-[#332A1F] text-[#D4B98E] border-[#4A3D2D]'
               }`}
             >
-              Bucket 2 &bull; Gold
-            </span>
-            <span className={`text-[11px] ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
-              Finished at Plating
+              Gold
             </span>
           </div>
 
-          <h3 className={`text-base font-bold font-brand ${isBright ? 'text-[#3D2F1B]' : 'text-neutral-100'}`}>
-            Ready Stock (Gold)
+          <h3 className={`text-xs font-bold font-brand truncate ${isBright ? 'text-[#3D2F1B]' : 'text-neutral-100'}`}>
+            Ready (Gold)
           </h3>
 
-          <div className="mt-3.5 grid grid-cols-2 gap-3 pt-2.5 border-t border-dashed border-[#DECFC0]/70 dark:border-[#4A3D2D]">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 pt-1.5 border-t border-dashed border-[#DECFC0]/70 dark:border-[#4A3D2D]">
             <div>
-              <span className={`block text-[11px] ${isBright ? 'text-[#786E64]' : 'text-neutral-400'}`}>
-                Total Pieces
+              <span className={`block text-[10px] ${isBright ? 'text-[#786E64]' : 'text-neutral-400'}`}>
+                Pieces
               </span>
               <span
-                className={`text-xl font-bold font-mono tracking-tight ${
+                className={`text-sm font-bold font-mono tracking-tight ${
                   isBright ? 'text-[#3D2F1B]' : 'text-neutral-100'
                 }`}
               >
                 {goldTotalPieces.toLocaleString()}
-                <span className="text-xs font-normal text-[#786E64] ml-1">pcs</span>
               </span>
             </div>
             <div>
-              <span className={`block text-[11px] ${isBright ? 'text-[#786E64]' : 'text-neutral-400'}`}>
-                Total Weight
+              <span className={`block text-[10px] ${isBright ? 'text-[#786E64]' : 'text-neutral-400'}`}>
+                Weight
               </span>
               <span
-                className={`text-lg font-bold font-mono tracking-tight ${
-                  isBright ? 'text-[#54432E]' : 'text-neutral-200'
+                className={`text-sm font-bold font-mono tracking-tight ${
+                  isBright ? 'text-[#3D2F1B]' : 'text-amber-300'
                 }`}
               >
-                {goldTotalWeight.toFixed(2)}
-                <span className="text-xs font-normal text-[#786E64] ml-1">g</span>
+                {goldTotalWeight.toFixed(1)}g
               </span>
             </div>
           </div>
@@ -337,7 +324,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
             return (
               <div
                 key={item.designId}
-                className={`p-4.5 rounded-2xl border transition-all duration-200 shadow-xs hover:shadow-sm flex flex-col justify-between space-y-3.5 ${
+                className={`p-3 rounded-xl border transition-all duration-200 shadow-xs hover:shadow-sm flex flex-col justify-between space-y-2.5 ${
                   item.isLowStock
                     ? isBright
                       ? 'bg-[#FAF8F5] border-[#D6C7B2] ring-1 ring-[#D6C7B2]/40'

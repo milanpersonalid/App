@@ -37,9 +37,9 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
   const { working, idle } = getKarigarStatusForStage(stage);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto no-print">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
-        className={`relative w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors ${
+        className={`relative w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors max-w-full ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-neutral-900 border-neutral-700 text-neutral-100'
@@ -104,7 +104,7 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-6 max-h-[75vh] overflow-y-auto overflow-x-hidden w-full max-w-full">
           {/* SECTION 1: WORKING KARIGARS */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
