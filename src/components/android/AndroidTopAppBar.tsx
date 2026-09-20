@@ -121,9 +121,6 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
                   <span className="block truncate font-bold text-sm leading-tight">
                     {currentUser?.name || 'Milan Ajudiya'}
                   </span>
-                  <span className="text-[10px] text-[#C5A059] font-medium uppercase tracking-wider">
-                    {currentUser?.role || 'Production Head'}
-                  </span>
                 </div>
               </button>
 
@@ -155,7 +152,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
                 }`}
               >
                 <PlusCircle className="w-4 h-4 text-[#C5A059]" />
-                <span>Create Production Lot</span>
+                <span>Create Lot</span>
               </button>
 
               <button
@@ -321,44 +318,94 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
                     : 'bg-[#292623] border-[#44403C] text-[#F5F5F4]'
                 }`}
               >
-                <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-700">
+                <div
+                  className={`flex items-center justify-between pb-2 border-b ${
+                    isBright ? 'border-slate-200 text-slate-900' : 'border-stone-700 text-stone-100'
+                  }`}
+                >
                   <span className="font-bold font-serif text-sm">Workshop Alerts</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#C5A059]/20 text-[#C5A059] font-bold">
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      isBright
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                        : 'bg-[#C5A059]/20 text-[#C5A059]'
+                    }`}
+                  >
                     {totalPending} Action{totalPending === 1 ? '' : 's'}
                   </span>
                 </div>
 
                 <div className="py-2 space-y-2">
                   {awaitingCount > 0 && (
-                    <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-start gap-2.5">
-                      <AlertCircle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
+                    <div
+                      className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-colors ${
+                        isBright
+                          ? 'bg-rose-50 border-rose-200 shadow-xs'
+                          : 'bg-rose-950/40 border-rose-900'
+                      }`}
+                    >
+                      <AlertCircle
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          isBright ? 'text-rose-600' : 'text-rose-400'
+                        }`}
+                      />
                       <div>
-                        <div className="font-bold text-rose-700 dark:text-rose-300">
+                        <div
+                          className={`font-bold ${
+                            isBright ? 'text-rose-900' : 'text-rose-300'
+                          }`}
+                        >
                           {awaitingCount} Awaiting Data Entry
                         </div>
-                        <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
-                          Slip scanned in Step 5; awaiting manual return weight entry.
+                        <div
+                          className={`text-[11px] mt-0.5 leading-snug ${
+                            isBright ? 'text-slate-700 font-medium' : 'text-stone-400'
+                          }`}
+                        >
+                          Slip scanned upon arrival; awaiting manual return weight entry.
                         </div>
                       </div>
                     </div>
                   )}
 
                   {stageDoneCount > 0 && (
-                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <div
+                      className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-colors ${
+                        isBright
+                          ? 'bg-emerald-50 border-emerald-200 shadow-xs'
+                          : 'bg-emerald-950/40 border-emerald-900'
+                      }`}
+                    >
+                      <CheckCircle2
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          isBright ? 'text-emerald-700' : 'text-emerald-400'
+                        }`}
+                      />
                       <div>
-                        <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                        <div
+                          className={`font-bold ${
+                            isBright ? 'text-emerald-900' : 'text-emerald-300'
+                          }`}
+                        >
                           {stageDoneCount} Stage Completed
                         </div>
-                        <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">
-                          Step 6 verified; ready to pick next stage (Step 7).
+                        <div
+                          className={`text-[11px] mt-0.5 leading-snug ${
+                            isBright ? 'text-slate-700 font-medium' : 'text-stone-400'
+                          }`}
+                        >
+                          Return verified; ready to send to next stage.
                         </div>
                       </div>
                     </div>
                   )}
 
                   {totalPending === 0 && (
-                    <div className="py-4 text-center text-stone-400 text-xs">
+                    <div
+                      className={`py-4 text-center text-xs ${
+                        isBright ? 'text-slate-600 font-medium' : 'text-stone-400'
+                      }`}
+                    >
                       All lots are smoothly in progress. No urgent actions pending.
                     </div>
                   )}

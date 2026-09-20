@@ -36,10 +36,28 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
   const isBright = theme === 'bright';
   const { working, idle } = getKarigarStatusForStage(stage);
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print cursor-pointer"
+    >
       <div
-        className={`relative w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors max-w-full ${
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors max-w-full cursor-default ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-neutral-900 border-neutral-700 text-neutral-100'
@@ -278,7 +296,7 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                             onClick={() => onOpenStep6(lot, design)}
                             className="flex-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 text-[11px] font-bold shadow-sm transition active:scale-95"
                           >
-                            Enter Data (Step 6)
+                            Enter Return Data
                           </button>
                         )}
 
@@ -287,7 +305,7 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                             onClick={() => onOpenStep7(lot)}
                             className="flex-1 px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 text-[11px] font-bold shadow-sm transition active:scale-95"
                           >
-                            Pick Next Stage (Step 7)
+                            Send to Next Stage
                           </button>
                         )}
 

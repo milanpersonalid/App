@@ -14,7 +14,6 @@ import {
   Sliders,
 } from 'lucide-react';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
-import { AppLogoIcon } from './AppLogoIcon';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -79,9 +78,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Sliders className="w-4 h-4 text-[#E07A5F]" />
                 <span>App Settings</span>
               </h2>
-              <p className={`text-[11px] ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
-                Titanium &amp; Rose Gold &bull; Jewellery Foundry
-              </p>
             </div>
           </div>
 
@@ -136,9 +132,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div>
                   <div className="font-bold text-[#F4F4F6] text-sm">Dark Mode</div>
-                  <div className="text-[10px] text-[#A1A1AA] mt-0.5 leading-tight">
-                    Titanium #1E1E24 with warm Rose Gold #E07A5F accents.
-                  </div>
                 </div>
 
                 {/* Micro preview illustration */}
@@ -171,9 +164,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div>
                   <div className={`font-bold text-sm ${isBright ? 'text-[#27272A]' : 'text-[#F4F4F6]'}`}>
                     Light Mode
-                  </div>
-                  <div className={`text-[10px] mt-0.5 leading-tight ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
-                    Polished mist #F4F4F6 with #FFFFFF card surfaces.
                   </div>
                 </div>
 
@@ -276,49 +266,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 3. FOUNDRY SPECIFICATION PALETTE INFO */}
-          <div
-            className={`p-3.5 rounded-2xl border space-y-2.5 ${
-              isBright
-                ? 'bg-[#F4F4F6] border-[#D4D4D8]'
-                : 'bg-[#1E1E24] border-[#3F3F46]'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <AppLogoIcon size="md" />
-              <div>
-                <div
-                  className={`font-bold font-brand transition-colors ${
-                    isBright ? 'text-[#18181B]' : 'text-[#F4F4F6]'
-                  }`}
-                >
-                  Shreenathji Imitation
-                </div>
-                <div className={`text-[10px] ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
-                  Titanium &amp; Rose Gold — Refined Jewellery Foundry
-                </div>
-              </div>
-            </div>
-
-            <div className={`grid grid-cols-2 gap-2 pt-2 border-t text-[11px] ${isBright ? 'border-[#D4D4D8]' : 'border-[#3F3F46]'}`}>
-              <div className={`p-2 rounded-xl border ${isBright ? 'bg-[#FFFFFF] border-[#D4D4D8]' : 'bg-[#292930] border-[#3F3F46]'}`}>
-                <span className={`block text-[10px] ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>Foundry Primary</span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-3 h-3 rounded-full bg-[#E07A5F]" />
-                  <span className="font-semibold text-[#E07A5F]">Rose Gold #E07A5F</span>
-                </div>
-              </div>
-              <div className={`p-2 rounded-xl border ${isBright ? 'bg-[#FFFFFF] border-[#D4D4D8]' : 'bg-[#292930] border-[#3F3F46]'}`}>
-                <span className={`block text-[10px] ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>Foundry Secondary</span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-3 h-3 rounded-full bg-[#E8998D]" />
-                  <span className="font-semibold text-[#E8998D]">Copper #E8998D</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. ACCOUNT & LOGOUT ACTIONS */}
+          {/* 3. ACCOUNT & LOGOUT ACTIONS */}
           <div className={`pt-2 border-t flex flex-col gap-2 ${isBright ? 'border-[#D4D4D8]' : 'border-[#3F3F46]'}`}>
             {onBackToProfile && (
               <button
@@ -331,7 +279,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <User className="w-4 h-4 text-[#E07A5F]" />
-                <span>Return to Profile Details</span>
+                <span>Profile</span>
               </button>
             )}
 
@@ -344,7 +292,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full py-2.5 px-4 rounded-xl bg-[#A8556B]/15 hover:bg-[#A8556B]/25 text-[#A8556B] border border-[#A8556B]/40 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-[0.99]"
             >
               <LogOut className="w-4 h-4 text-[#A8556B]" />
-              <span>Log Out of Foundry Terminal</span>
+              <span>Logout</span>
             </button>
           </div>
         </div>

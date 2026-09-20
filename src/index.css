@@ -522,6 +522,21 @@ table tbody tr:hover {
   color: #FFFFFF !important;
 }
 
+/* Printable Slip Table & Row Lines */
+.printable-slip-container table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+}
+
+.printable-slip-container tbody tr {
+  border-bottom: 1.5px solid #000000 !important;
+}
+
+.printable-slip-container td {
+  border-bottom: 1.5px solid #000000 !important;
+}
+
 /* Print Styles */
 @media print {
   html, body {
@@ -574,15 +589,28 @@ table tbody tr:hover {
 
   .printable-slip-container table {
     border-collapse: collapse !important;
+    border-spacing: 0 !important;
     width: 100% !important;
-    border: 1px solid #000000 !important;
+    border: 1.5px solid #000000 !important;
+  }
+
+  .printable-slip-container tbody tr {
+    border-bottom: 1.5px solid #000000 !important;
   }
 
   .printable-slip-container th,
   .printable-slip-container td {
-    border: 1px solid #000000 !important;
+    border-bottom: 1.5px solid #000000 !important;
     color: #000000 !important;
     padding: 4px 8px !important;
+  }
+
+  .printable-slip-container td.border-r {
+    border-right: 1px solid #000000 !important;
+  }
+
+  .printable-slip-container td.border-r-2 {
+    border-right: 2px solid #000000 !important;
   }
 
   .printable-slip-container img,

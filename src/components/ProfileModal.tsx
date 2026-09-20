@@ -3,7 +3,6 @@ import {
   X,
   Mail,
   Phone,
-  Building2,
   ShieldCheck,
   Settings,
   LogOut,
@@ -68,7 +67,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-[#E07A5F]" />
-            <span>Foundry Profile</span>
+            <span>Profile</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -147,10 +146,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   </button>
                 </h3>
               </div>
-              <p className="text-xs font-semibold text-[#E07A5F]">{currentUser.role}</p>
-              <p className={`text-[11px] flex items-center gap-1 mt-0.5 ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
-                <Building2 className="w-3 h-3 text-[#E07A5F]" /> {currentUser.facility}
-              </p>
             </div>
           ) : (
             <form

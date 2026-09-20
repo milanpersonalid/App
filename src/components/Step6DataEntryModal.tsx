@@ -2,13 +2,20 @@ import React, { useState, useMemo } from 'react';
 import { Lot, Design } from '../types';
 import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
-import { AlertTriangle, CheckCircle2, Scale, Calculator, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Scale, Calculator, RefreshCw, X, GitBranch } from 'lucide-react';
+import {
+  getStageAvgWeight,
+  getStageWeightLabel,
+  isWeightEstimationApplicable,
+  getDefaultCalibrationTarget,
+  CalibrationTarget,
+} from '../utils/stageWeights';
 
 interface Step6DataEntryModalProps {
   lot: Lot;
   design: Design;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (updatedLot: Lot) => void;
 }
 
 export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
@@ -21,10 +28,20 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
+  const isChholStage = lot.currentStage === 'Chhol';
+  const [chholBranch, setChholBranch] = useState<'plain' | 'gold'>(
+    lot.branch === 'gold' ? 'gold' : 'plain'
+  );
+
+  const effectiveBranch = isChholStage ? chholBranch : lot.branch;
   const currentRecord = lot.history[lot.history.length - 1];
   const weightSent = currentRecord?.weightSent ?? lot.initialWeight;
   const piecesSent = currentRecord?.piecesSent ?? lot.initialPieces;
-  const avgWeightPerPiece = design.averageWeightPerPiece;
+  
+  // Specific stage average weight
+  const avgWeightPerPiece = getStageAvgWeight(design, lot.currentStage, effectiveBranch);
+  const stageWeightLabel = getStageWeightLabel(lot.currentStage, effectiveBranch);
+  const canEstimateByWeight = isWeightEstimationApplicable(lot.currentStage);
 
   // Step 6 Inputs
   // 1. Total weight received (grams)
@@ -34,7 +51,9 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   // 5. Rejected pieces (manual entry)
   const [rejectedPiecesInput, setRejectedPiecesInput] = useState<string>('0');
 
-  // 7. Optional Recalibration Control
+  // 7. Recalibration Control
+  const defaultTarget = getDefaultCalibrationTarget(lot.currentStage, effectiveBranch);
+  const [calibrationTarget, setCalibrationTarget] = useState<CalibrationTarget>(defaultTarget);
   const [enableRecalibration, setEnableRecalibration] = useState<boolean>(false);
   const [actualCountedWeight, setActualCountedWeight] = useState<string>('');
   const [actualCountedPieces, setActualCountedPieces] = useState<string>('');
@@ -46,35 +65,52 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   const statedPieces = parseInt(statedPiecesInput, 10) || 0;
   const rejectedPieces = parseInt(rejectedPiecesInput, 10) || 0;
 
-  // 2. Auto-calculated Estimated pieces = Weight received ÷ Average weight per piece
+  // Auto-calculated Estimated pieces = Weight received ÷ Average weight per piece (skipped at Chhol)
   const estimatedPieces = useMemo(() => {
-    if (weightReceived <= 0 || avgWeightPerPiece <= 0) return 0;
+    if (!canEstimateByWeight || weightReceived <= 0 || avgWeightPerPiece <= 0) return 0;
     return Math.round(weightReceived / avgWeightPerPiece);
-  }, [weightReceived, avgWeightPerPiece]);
+  }, [canEstimateByWeight, weightReceived, avgWeightPerPiece]);
 
-  // 4. Discrepancy warning logic
+  // Discrepancy warning logic
   const discrepancy = useMemo(() => {
     if (weightReceived <= 0 || !statedPiecesInput || statedPieces <= 0) {
-      return { hasWarning: false, gramDiff: 0, pieceDiff: 0 };
+      return { hasWarning: false, gramDiff: 0, pieceDiff: 0, message: '' };
     }
-    // Theoretical weight for stated pieces
-    const theoreticalWeight = statedPieces * avgWeightPerPiece;
-    const gramDiff = Math.abs(weightReceived - theoreticalWeight);
-    const pieceDiff = Math.abs(estimatedPieces - statedPieces);
 
-    // Tolerance: 1 to 2 grams natural variance is normal.
-    // Warn if gramDiff > 2.0g OR piece difference > 3% / > 3 pieces
-    const hasWarning = gramDiff > 2.0 || pieceDiff > Math.max(3, estimatedPieces * 0.03);
+    if (canEstimateByWeight) {
+      // Theoretical weight for stated pieces
+      const theoreticalWeight = statedPieces * avgWeightPerPiece;
+      const gramDiff = Math.abs(weightReceived - theoreticalWeight);
+      const pieceDiff = Math.abs(estimatedPieces - statedPieces);
 
-    return {
-      hasWarning,
-      gramDiff: Number(gramDiff.toFixed(2)),
-      pieceDiff,
-      theoreticalWeight: Number(theoreticalWeight.toFixed(2)),
-    };
-  }, [weightReceived, statedPiecesInput, statedPieces, avgWeightPerPiece, estimatedPieces]);
+      // Tolerance: 1 to 2 grams natural variance is normal.
+      // Warn if gramDiff > 2.0g OR piece difference > 3% / > 3 pieces
+      const hasWarning = gramDiff > 2.0 || pieceDiff > Math.max(3, estimatedPieces * 0.03);
 
-  // 6. Weight loss & Loss %
+      return {
+        hasWarning,
+        gramDiff: Number(gramDiff.toFixed(2)),
+        pieceDiff,
+        theoreticalWeight: Number(theoreticalWeight.toFixed(2)),
+        message: `Stated ${statedPieces} pcs deviates from estimated ${estimatedPieces} pcs by ${gramDiff.toFixed(2)}g (${pieceDiff} pcs difference).`,
+      };
+    } else {
+      // Chhol stage: Pieces should match piecesSent minus rejects
+      const expectedPieces = piecesSent - rejectedPieces;
+      const pieceVariance = Math.abs(statedPieces - expectedPieces);
+      const hasWarning = pieceVariance > 2;
+
+      return {
+        hasWarning,
+        gramDiff: 0,
+        pieceDiff: pieceVariance,
+        theoreticalWeight: 0,
+        message: `Stated ${statedPieces} pcs differs from expected ${expectedPieces} pcs (${piecesSent} sent - ${rejectedPieces} rejected). Material was filed off during Chhol.`,
+      };
+    }
+  }, [canEstimateByWeight, weightReceived, statedPiecesInput, statedPieces, avgWeightPerPiece, estimatedPieces, piecesSent, rejectedPieces]);
+
+  // Weight loss & Loss %
   const weightLoss = useMemo(() => {
     if (weightReceived <= 0) return 0;
     return Number(Math.max(0, weightSent - weightReceived).toFixed(3));
@@ -120,17 +156,21 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
       statedPieces,
       rejectedPieces,
       recalibratedAvgWeight: newRecalibratedWeight,
+      recalibrationTarget: enableRecalibration ? calibrationTarget : undefined,
+      chholBranchTarget: isChholStage ? chholBranch : undefined,
     });
 
-    if (res.success) {
-      onSuccess();
+    if (res.success && res.lot) {
+      onSuccess(res.lot);
+    } else if (res.success) {
+      onSuccess(lot);
     } else {
       setError(res.message);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div
         className={`relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden my-6 max-w-full transition-colors ${
           isBright
@@ -241,7 +281,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                   isBright ? 'text-[#27272A]' : 'text-neutral-100'
                 }`}
               >
-                {weightSent.toFixed(2)} g
+                {(weightSent ?? 0).toFixed(2)} g
               </span>
             </div>
             <div className={`border-x ${isBright ? 'border-[#D4D4D8]' : 'border-neutral-800'}`}>
@@ -266,17 +306,70 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                   isBright ? 'text-[#71717A]' : 'text-neutral-400'
                 }`}
               >
-                Avg Weight
+                {stageWeightLabel}
               </span>
               <span
                 className={`font-mono font-bold text-sm ${
                   isBright ? 'text-[#C85235]' : 'text-amber-400'
                 }`}
               >
-                {avgWeightPerPiece.toFixed(3)} g/pc
+                {(avgWeightPerPiece || 1.5).toFixed(3)} g/pc
               </span>
             </div>
           </div>
+
+          {/* Chhol Stage Branch Selector */}
+          {isChholStage && (
+            <div
+              className={`p-3 rounded-xl border space-y-2 ${
+                isBright ? 'bg-amber-50/70 border-amber-200' : 'bg-amber-500/10 border-amber-500/20'
+              }`}
+            >
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label
+                  className={`text-xs font-semibold flex items-center gap-1.5 ${
+                    isBright ? 'text-amber-950' : 'text-amber-300'
+                  }`}
+                >
+                  <GitBranch className="w-3.5 h-3.5" />
+                  Destination Branch for this Lot:
+                </label>
+                <div className="inline-flex rounded-lg p-0.5 border border-amber-300/40 bg-black/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChholBranch('plain');
+                      setCalibrationTarget('plain');
+                    }}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                      chholBranch === 'plain'
+                        ? isBright ? 'bg-white text-slate-900 shadow-xs' : 'bg-neutral-800 text-amber-300 shadow-xs'
+                        : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-neutral-400 hover:text-neutral-200'
+                    }`}
+                  >
+                    Plain Branch
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChholBranch('gold');
+                      setCalibrationTarget('gold');
+                    }}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                      chholBranch === 'gold'
+                        ? isBright ? 'bg-white text-slate-900 shadow-xs' : 'bg-neutral-800 text-amber-300 shadow-xs'
+                        : isBright ? 'text-slate-600 hover:text-slate-900' : 'text-neutral-400 hover:text-neutral-200'
+                    }`}
+                  >
+                    Gold Branch
+                  </button>
+                </div>
+              </div>
+              <p className={`text-[11px] leading-relaxed ${isBright ? 'text-amber-900/80' : 'text-amber-200/70'}`}>
+                Material is removed during Chhol filing/grinding. Stage output will establish the baseline for the <strong>{chholBranch === 'plain' ? 'Plain' : 'Gold'}</strong> branch.
+              </p>
+            </div>
+          )}
 
           {/* Core Entry Grid (2 Columns) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -438,19 +531,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                 <strong className={`font-semibold block ${isBright ? 'text-[#78350F]' : 'text-amber-300'}`}>
                   Piece / Weight Variance Detected
                 </strong>
-                Stated{' '}
-                <span className={`font-mono font-bold ${isBright ? 'text-[#18181B]' : 'text-white'}`}>
-                  {statedPieces} pcs
-                </span>{' '}
-                deviates from estimated{' '}
-                <span className={`font-mono font-bold ${isBright ? 'text-[#18181B]' : 'text-white'}`}>
-                  {estimatedPieces} pcs
-                </span>{' '}
-                by{' '}
-                <span className={`font-mono font-bold ${isBright ? 'text-[#B45309]' : 'text-amber-300'}`}>
-                  {discrepancy.gramDiff}g
-                </span>{' '}
-                ({discrepancy.pieceDiff} pcs difference).
+                {discrepancy.message}
               </div>
             </div>
           )}
@@ -465,7 +546,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
               }`}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>{enableRecalibration ? 'Hide baseline recalibration' : '+ Recalibrate baseline average weight (optional)'}</span>
+              <span>{enableRecalibration ? 'Hide baseline recalibration' : '+ Recalibrate stage baseline weight (optional)'}</span>
             </button>
 
             {enableRecalibration && (
@@ -474,6 +555,26 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                   isBright ? 'bg-[#F4F4F6] border-[#E07A5F]/40' : 'bg-neutral-950 border-amber-500/30'
                 }`}
               >
+                <div>
+                  <label className={`block text-[10px] mb-1 font-semibold ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
+                    Target Calibration Point:
+                  </label>
+                  <select
+                    value={calibrationTarget}
+                    onChange={(e) => setCalibrationTarget(e.target.value as CalibrationTarget)}
+                    className={`w-full px-2.5 py-1.5 rounded-lg border font-mono text-xs outline-none ${
+                      isBright
+                        ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
+                        : 'bg-neutral-900 border-neutral-700 text-neutral-100'
+                    }`}
+                  >
+                    <option value="wax">Wax Stage Baseline (waxAvgWeightPerPiece)</option>
+                    <option value="metal">Metal / Post-Casting Baseline (metalAvgWeightPerPiece)</option>
+                    <option value="plain">Post-Chhol Plain Baseline (plainAvgWeightPerPiece)</option>
+                    <option value="gold">Post-Chhol Gold Baseline (goldAvgWeightPerPiece)</option>
+                  </select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className={`block text-[10px] mb-1 ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
@@ -511,7 +612,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                 </div>
                 {calculatedRecalibratedWeight && (
                   <div className={`text-[11px] font-mono ${isBright ? 'text-[#C85235]' : 'text-amber-400'}`}>
-                    New baseline: <strong className="font-bold">{calculatedRecalibratedWeight} g/pc</strong> for {design.name}
+                    New <strong className="uppercase">{calibrationTarget}</strong> baseline: <strong className="font-bold">{calculatedRecalibratedWeight} g/pc</strong> for {design.name}
                   </div>
                 )}
               </div>
@@ -540,7 +641,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
-              Complete Stage
+              Complete Stage &amp; Assign Artisan &rarr;
             </button>
           </div>
         </form>

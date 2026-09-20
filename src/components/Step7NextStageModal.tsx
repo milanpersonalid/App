@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lot, Stage, BranchType, Karigar } from '../types';
 import { useApp } from '../context/AppContext';
-import { ArrowRight, Sparkles, Check, X, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Sparkles, Check, X, ShieldAlert, Printer } from 'lucide-react';
 
 interface Step7NextStageModalProps {
   lot: Lot;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (dispatchedLot: Lot) => void;
 }
 
 export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
@@ -50,8 +50,8 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
       },
     ];
   } else {
-    // Normal fixed sequence: Wax → Casting → Buff → Zabora → Dal → Chhol
-    const sequence: Stage[] = ['Wax', 'Casting', 'Buff', 'Zabora', 'Dal', 'Chhol'];
+    // Normal fixed sequence: Wax → Casting → Buff → Zabora → Dull → Chhol
+    const sequence: Stage[] = ['Wax', 'Casting', 'Buff', 'Zabora', 'Dull', 'Chhol'];
     const currentIndex = sequence.indexOf(lot.currentStage);
     if (currentIndex !== -1 && currentIndex < sequence.length - 1) {
       const nextStg = sequence[currentIndex + 1];
@@ -69,6 +69,18 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
   const [selectedOption, setSelectedOption] = useState(availableStages[0] || null);
   const [selectedKarigarId, setSelectedKarigarId] = useState<string>('');
   const [error, setError] = useState<string>('');
+
+  // Auto-suggest specialty karigar when stage option is chosen
+  useEffect(() => {
+    if (selectedOption?.stage && selectedOption.stage !== 'Ready Stock') {
+      const match = karigars.find((k) => k.specialtyStages.includes(selectedOption.stage));
+      if (match) {
+        setSelectedKarigarId(match.id);
+      } else if (karigars.length > 0 && !selectedKarigarId) {
+        setSelectedKarigarId(karigars[0].id);
+      }
+    }
+  }, [selectedOption, karigars]);
 
   // Filter karigars suitable for chosen next stage (if not Ready Stock)
   const isMovingToReadyStock = selectedOption?.stage === 'Ready Stock';
@@ -97,15 +109,17 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
       selectedKarigarId || lot.currentKarigarId
     );
 
-    if (res.success) {
-      onSuccess();
+    if (res.success && res.lot) {
+      onSuccess(res.lot);
+    } else if (res.success) {
+      onSuccess(lot);
     } else {
       setError(res.message);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
       <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden my-6 max-w-full">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-950">
@@ -114,7 +128,7 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
               <ArrowRight className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-neutral-100">Step 7 — Pick Next Stage</h3>
+              <h3 className="font-semibold text-neutral-100">Send to Next Production Stage</h3>
               <p className="text-xs text-neutral-400">
                 Lot {lot.lotNumber} &bull; Current: {lot.currentStage} (Completed)
               </p>
@@ -240,8 +254,17 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
               type="submit"
               className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-sans shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
             >
-              <ArrowRight className="w-4 h-4" />
-              {isMovingToReadyStock ? 'Move to Ready Stock' : 'Dispatch to Next Stage'}
+              {isMovingToReadyStock ? (
+                <>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Move to Ready Stock</span>
+                </>
+              ) : (
+                <>
+                  <Printer className="w-4 h-4" />
+                  <span>Dispatch &amp; Print Next Slip &rarr;</span>
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
-import { Design } from '../../types';
+import { Design, CalibrationTarget } from '../../types';
 import { generateBarcodeSvg } from '../../utils/qrBarcode';
 import {
   Sparkles,
@@ -31,6 +31,7 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
 
   // Inline recalibration state
   const [recalibratingDesignId, setRecalibratingDesignId] = useState<string | null>(null);
+  const [recalTarget, setRecalTarget] = useState<CalibrationTarget>('wax');
   const [recalWeight, setRecalWeight] = useState<string>('');
   const [recalPieces, setRecalPieces] = useState<string>('');
 
@@ -50,7 +51,7 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
     const p = parseInt(recalPieces, 10);
     if (w > 0 && p > 0) {
       const newAvg = w / p;
-      recalibrateDesign(designId, newAvg);
+      recalibrateDesign(designId, newAvg, recalTarget);
       setRecalibratingDesignId(null);
       setRecalWeight('');
       setRecalPieces('');
@@ -144,85 +145,100 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Key Spec Metrics */}
+                {/* Key Spec Metrics: 4-Tier Calibration System */}
                 <div
-                  className={`grid grid-cols-2 gap-2 p-2.5 rounded-xl border text-xs ${
+                  className={`p-2.5 rounded-xl border text-xs space-y-2.5 ${
                     isBright
                       ? 'bg-[#F8FAFC] border-[#E2E8F0]'
                       : 'bg-neutral-900 border-neutral-800/80'
                   }`}
                 >
-                  {/* Baseline Average Weight per Piece */}
-                  <div>
-                    <span
-                      className={`block text-[10px] ${
-                        isBright ? 'text-slate-500' : 'text-neutral-400'
-                      }`}
-                    >
-                      Baseline Avg Weight / Piece
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isBright ? 'text-slate-600' : 'text-neutral-400'}`}>
+                      Stage Weight Baselines (4 Calibration Tiers)
                     </span>
-                    <span className="font-mono font-bold text-xs text-amber-500">
-                      {design.averageWeightPerPiece.toFixed(4)} g
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
+                        Alert:
+                      </span>
+                      {isEditingThreshold ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={newThresholdValue}
+                            onChange={(e) => setNewThresholdValue(e.target.value)}
+                            className={`w-14 px-1 py-0.5 rounded border text-xs font-mono ${
+                              isBright
+                                ? 'bg-white border-amber-500 text-[#0F172A]'
+                                : 'bg-neutral-950 border-amber-500 text-neutral-100'
+                            }`}
+                          />
+                          <button
+                            onClick={() => handleSaveThreshold(design.id)}
+                            className="p-1 rounded bg-amber-400 text-neutral-950"
+                          >
+                            <Check className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setEditingThresholdId(design.id);
+                            setNewThresholdValue(design.lowStockThreshold.toString());
+                          }}
+                          className="font-mono font-bold text-xs text-amber-500 hover:underline flex items-center gap-0.5"
+                          title="Click to edit low stock threshold"
+                        >
+                          {design.lowStockThreshold} pcs
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Low Stock Alert Threshold */}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-[10px] ${
-                          isBright ? 'text-slate-500' : 'text-neutral-400'
-                        }`}
-                      >
-                        Low Stock Alert
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-dashed border-neutral-700/40">
+                    <div>
+                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
+                        Wax Stage
                       </span>
-                      <button
-                        onClick={() => {
-                          setEditingThresholdId(design.id);
-                          setNewThresholdValue(design.lowStockThreshold.toString());
-                        }}
-                        className="text-[10px] text-amber-500 font-medium hover:underline"
-                      >
-                        Edit
-                      </button>
+                      <span className="font-mono font-bold text-xs text-amber-500">
+                        {(design.waxAvgWeightPerPiece ?? 0.2).toFixed(4)} g
+                      </span>
                     </div>
 
-                    {isEditingThreshold ? (
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <input
-                          type="number"
-                          value={newThresholdValue}
-                          onChange={(e) => setNewThresholdValue(e.target.value)}
-                          className={`w-16 px-1.5 py-0.5 rounded border text-xs font-mono ${
-                            isBright
-                              ? 'bg-white border-amber-500 text-[#0F172A]'
-                              : 'bg-neutral-950 border-amber-500 text-neutral-100'
-                          }`}
-                        />
-                        <button
-                          onClick={() => handleSaveThreshold(design.id)}
-                          className="p-1 rounded bg-amber-400 text-neutral-950"
-                        >
-                          <Check className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        className={`font-mono font-bold text-xs ${
-                          isBright ? 'text-[#0F172A]' : 'text-neutral-200'
-                        }`}
-                      >
-                        {design.lowStockThreshold} pcs
+                    <div>
+                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
+                        Metal / Post-Cast
                       </span>
-                    )}
+                      <span className="font-mono font-bold text-xs text-blue-400">
+                        {(design.metalAvgWeightPerPiece ?? 1.5).toFixed(4)} g
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
+                        Post-Chhol Plain
+                      </span>
+                      <span className="font-mono font-bold text-xs text-emerald-500">
+                        {(design.plainAvgWeightPerPiece ?? 1.4).toFixed(4)} g
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
+                        Post-Chhol Gold
+                      </span>
+                      <span className="font-mono font-bold text-xs text-amber-400">
+                        {(design.goldAvgWeightPerPiece ?? 1.45).toFixed(4)} g
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Recalibration Section */}
                 {isRecalibrating && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-neutral-900 border border-amber-500/40 space-y-2 text-xs">
+                  <div className="mt-3 p-3.5 rounded-xl bg-neutral-900 border border-amber-500/40 space-y-2.5 text-xs">
                     <div className="font-semibold text-amber-300 flex items-center justify-between">
-                      <span>Recalibrate Baseline Average Weight</span>
+                      <span>Recalibrate Stage Baseline Weight</span>
                       <button
                         onClick={() => setRecalibratingDesignId(null)}
                         className="text-neutral-400 hover:text-white"
@@ -230,8 +246,34 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                         Cancel
                       </button>
                     </div>
+
+                    <div>
+                      <label className="block text-[10px] text-neutral-400 mb-1">
+                        Select Target Calibration Tier:
+                      </label>
+                      <select
+                        value={recalTarget}
+                        onChange={(e) => {
+                          const target = e.target.value as CalibrationTarget;
+                          setRecalTarget(target);
+                          let val = design.waxAvgWeightPerPiece ?? 0.2;
+                          if (target === 'metal') val = design.metalAvgWeightPerPiece ?? 1.5;
+                          if (target === 'plain') val = design.plainAvgWeightPerPiece ?? 1.4;
+                          if (target === 'gold') val = design.goldAvgWeightPerPiece ?? 1.45;
+                          setRecalWeight(val.toFixed(4));
+                          setRecalPieces('1');
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-700 text-xs font-mono text-neutral-100 outline-none"
+                      >
+                        <option value="wax">Wax Stage Baseline (waxAvgWeightPerPiece)</option>
+                        <option value="metal">Metal / Post-Cast Baseline (metalAvgWeightPerPiece)</option>
+                        <option value="plain">Post-Chhol Plain Baseline (plainAvgWeightPerPiece)</option>
+                        <option value="gold">Post-Chhol Gold Baseline (goldAvgWeightPerPiece)</option>
+                      </select>
+                    </div>
+
                     <p className="text-[10px] text-neutral-400">
-                      Actual counted weight &divide; Actual counted pieces = New baseline reused across future stages.
+                      Actual counted weight &divide; Actual counted pieces = New baseline saved for this specific stage tier.
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <input
@@ -254,7 +296,7 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                       onClick={() => handleSaveRecalibration(design.id)}
                       className="w-full py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs transition"
                     >
-                      Update Baseline Avg Weight
+                      Update {recalTarget.toUpperCase()} Baseline Weight
                     </button>
                   </div>
                 )}
@@ -269,8 +311,9 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                 <button
                   onClick={() => {
                     setRecalibratingDesignId(design.id);
-                    setRecalWeight(design.sampleWeight.toString());
-                    setRecalPieces(design.samplePieceCount.toString());
+                    setRecalTarget('wax');
+                    setRecalWeight((design.waxAvgWeightPerPiece ?? 0.2).toFixed(4));
+                    setRecalPieces('1');
                   }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
                     isBright

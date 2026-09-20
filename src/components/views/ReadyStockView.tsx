@@ -151,7 +151,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
                   isBright ? 'text-[#334155]' : 'text-neutral-200'
                 }`}
               >
-                {plainTotalWeight.toFixed(1)}g
+                {(plainTotalWeight || 0).toFixed(1)}g
               </span>
             </div>
           </div>
@@ -208,7 +208,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
                   isBright ? 'text-[#3D2F1B]' : 'text-amber-300'
                 }`}
               >
-                {goldTotalWeight.toFixed(1)}g
+                {(goldTotalWeight || 0).toFixed(1)}g
               </span>
             </div>
           </div>
@@ -435,7 +435,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
                           isBright ? 'text-[#64748B]' : 'text-neutral-400'
                         }`}
                       >
-                        {item.plainWeight.toFixed(2)} g
+                        {(item.plainWeight ?? 0).toFixed(2)} g
                       </div>
                     </div>
 
@@ -468,7 +468,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
                           isBright ? 'text-[#786E64]' : 'text-neutral-400'
                         }`}
                       >
-                        {item.goldWeight.toFixed(2)} g
+                        {(item.goldWeight ?? 0).toFixed(2)} g
                       </div>
                     </div>
                   </div>

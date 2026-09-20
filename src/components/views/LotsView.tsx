@@ -119,7 +119,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
               <option value="Casting">Casting</option>
               <option value="Buff">Buff</option>
               <option value="Zabora">Zabora</option>
-              <option value="Dal">Dal</option>
+              <option value="Dull">Dull</option>
               <option value="Chhol">Chhol</option>
               <option value="Plating">Plating</option>
               <option value="Ready Stock">Ready Stock</option>
@@ -294,7 +294,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
                   {design && (
                     <button
                       onClick={() => onOpenSlip(lot, design)}
-                      title="Print Stage Slip (Step 1)"
+                      title="Print Stage Slip"
                       className={`p-2 rounded-xl border transition flex items-center gap-1.5 text-xs font-semibold ${
                         isBright
                           ? 'bg-[#F8FAFC] hover:bg-[#F1F5F9] text-[#1E293B] border-[#CBD5E1]'
@@ -311,7 +311,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
                       onClick={() => confirmArrival(lot.lotNumber)}
                       className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 text-xs font-semibold transition"
                     >
-                      Confirm Arrival (Step 5)
+                      Confirm Arrival
                     </button>
                   )}
 
@@ -320,7 +320,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
                       onClick={() => onOpenStep6(lot, design)}
                       className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow-md transition active:scale-95"
                     >
-                      Enter Data (Step 6)
+                      Enter Return Data
                     </button>
                   )}
 
@@ -329,7 +329,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
                       onClick={() => onOpenStep7(lot)}
                       className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs shadow-md transition active:scale-95"
                     >
-                      Pick Next Stage (Step 7) &rarr;
+                      Send to Next Stage &rarr;
                     </button>
                   )}
 

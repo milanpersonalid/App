@@ -60,6 +60,7 @@ const MainApp: React.FC = () => {
   const [selectedSlipData, setSelectedSlipData] = useState<{
     lot: Lot;
     design: Design;
+    initialStage?: Stage;
   } | null>(null);
 
   const [selectedStep6Data, setSelectedStep6Data] = useState<{
@@ -94,8 +95,8 @@ const MainApp: React.FC = () => {
   }, []);
 
   // Handlers
-  const handleOpenSlip = (lot: Lot, design: Design) => {
-    setSelectedSlipData({ lot, design });
+  const handleOpenSlip = (lot: Lot, design: Design, initialStage?: Stage) => {
+    setSelectedSlipData({ lot, design, initialStage });
   };
 
   const handleOpenStep6 = (lot: Lot, design: Design) => {
@@ -264,52 +265,9 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
-      {/* ALL MODALS (SLIP, DATA ENTRY, NEXT STAGE, DETAIL, SCANNER, PROFILE, SETTINGS) */}
+      {/* ALL MODALS (STAGE DETAIL, LOT DETAIL, STEP 6, STEP 7, STAGE SLIP, SCANNER, PROFILE, SETTINGS) */}
 
-      {/* Step 1: Stage Slip Modal (Printable) */}
-      {selectedSlipData && (
-        <StageSlipModal
-          lot={selectedSlipData.lot}
-          design={selectedSlipData.design}
-          onClose={() => setSelectedSlipData(null)}
-        />
-      )}
-
-      {/* Step 6: Manual Data Entry Modal */}
-      {selectedStep6Data && (
-        <Step6DataEntryModal
-          lot={selectedStep6Data.lot}
-          design={selectedStep6Data.design}
-          onClose={() => setSelectedStep6Data(null)}
-          onSuccess={() => {
-            setSelectedStep6Data(null);
-            if (selectedLotDetail?.id === selectedStep6Data.lot.id) {
-              const updated = lots.find((l) => l.id === selectedStep6Data.lot.id);
-              if (updated) setSelectedLotDetail(updated);
-            }
-          }}
-        />
-      )}
-
-      {/* Step 7: Pick Next Stage Modal */}
-      {selectedStep7Lot && (
-        <Step7NextStageModal
-          lot={selectedStep7Lot}
-          onClose={() => setSelectedStep7Lot(null)}
-          onSuccess={() => {
-            const updated = lots.find((l) => l.id === selectedStep7Lot.id);
-            setSelectedStep7Lot(null);
-            if (updated) {
-              const d = designs.find((design) => design.id === updated.designId);
-              if (d && updated.status !== 'ready_stock') {
-                setSelectedSlipData({ lot: updated, design: d });
-              }
-            }
-          }}
-        />
-      )}
-
-      {/* Stage Detail Modal */}
+      {/* Stage Detail Modal (Base Layer: z-50) */}
       {selectedStageDetail && (
         <StageDetailModal
           stage={selectedStageDetail}
@@ -321,7 +279,7 @@ const MainApp: React.FC = () => {
         />
       )}
 
-      {/* Lot Detail Modal */}
+      {/* Lot Detail Modal (Base Layer: z-50) */}
       {selectedLotDetail && (
         <LotDetailModal
           lot={selectedLotDetail}
@@ -329,6 +287,58 @@ const MainApp: React.FC = () => {
           onOpenSlip={handleOpenSlip}
           onOpenStep6={handleOpenStep6}
           onOpenStep7={handleOpenStep7}
+        />
+      )}
+
+      {/* Step 6: Manual Data Entry Modal (Action Layer: z-[60]) */}
+      {selectedStep6Data && (
+        <Step6DataEntryModal
+          lot={selectedStep6Data.lot}
+          design={selectedStep6Data.design}
+          onClose={() => setSelectedStep6Data(null)}
+          onSuccess={(updatedLot) => {
+            setSelectedStep6Data(null);
+            if (selectedLotDetail?.id === updatedLot.id) {
+              setSelectedLotDetail(updatedLot);
+            }
+            // Auto-advance: As soon as "Complete Stage" is clicked, immediately opens the next step to assign the artisan:
+            setSelectedStep7Lot(updatedLot);
+          }}
+        />
+      )}
+
+      {/* Step 7: Pick Next Stage Modal (Action Layer: z-[60]) */}
+      {selectedStep7Lot && (
+        <Step7NextStageModal
+          lot={selectedStep7Lot}
+          onClose={() => setSelectedStep7Lot(null)}
+          onSuccess={(dispatchedLot) => {
+            setSelectedStep7Lot(null);
+            if (selectedLotDetail?.id === dispatchedLot.id) {
+              setSelectedLotDetail(dispatchedLot);
+            }
+            // Auto-advance: pops open the printed slip for the new stage!
+            if (dispatchedLot.status !== 'ready_stock') {
+              const d = designs.find((design) => design.id === dispatchedLot.designId);
+              if (d) {
+                setSelectedSlipData({
+                  lot: dispatchedLot,
+                  design: d,
+                  initialStage: dispatchedLot.currentStage,
+                });
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Step 1 & Print: Stage Slip Modal (Top Layer: z-[70]) */}
+      {selectedSlipData && (
+        <StageSlipModal
+          lot={selectedSlipData.lot}
+          design={selectedSlipData.design}
+          initialStage={selectedSlipData.initialStage}
+          onClose={() => setSelectedSlipData(null)}
         />
       )}
 

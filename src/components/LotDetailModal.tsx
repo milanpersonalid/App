@@ -14,6 +14,7 @@ import {
   Sparkles,
   QrCode,
 } from 'lucide-react';
+import { getStageAvgWeight, getStageWeightLabel } from '../utils/stageWeights';
 
 interface LotDetailModalProps {
   lot: Lot;
@@ -40,10 +41,28 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
   const isInProgress = lot.status === 'in_progress';
   const isReadyStock = lot.status === 'ready_stock';
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print cursor-pointer"
+    >
       <div
-        className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors max-w-full ${
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-4 border transition-colors max-w-full cursor-default ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-neutral-900 border-neutral-700 text-neutral-100'
@@ -119,7 +138,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     Status: Arrived, Awaiting Entry (Red)
                   </span>
                   <span className={isBright ? 'text-slate-600' : 'text-neutral-300'}>
-                    Step 5 scan completed. Physical slip returned. Ready for Step 6 manual data entry.
+                    Tray returned from artisan. Ready for manual return weight and piece count entry.
                   </span>
                 </div>
               </div>
@@ -128,7 +147,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                   onClick={() => onOpenStep6(lot, design)}
                   className="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-xs shadow transition active:scale-95 whitespace-nowrap"
                 >
-                  Enter Data (Step 6)
+                  Enter Return Data
                 </button>
               )}
             </div>
@@ -143,7 +162,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     Status: Stage Complete (Green)
                   </span>
                   <span className={isBright ? 'text-slate-600' : 'text-neutral-300'}>
-                    Step 6 data entry saved. Lot is ready to advance to next stage (Step 7).
+                    Return data verified. Lot is ready to advance to the next stage.
                   </span>
                 </div>
               </div>
@@ -151,7 +170,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                 onClick={() => onOpenStep7(lot)}
                 className="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs shadow transition active:scale-95 whitespace-nowrap"
               >
-                Pick Next Stage (Step 7)
+                Send to Next Stage
               </button>
             </div>
           )}
@@ -187,7 +206,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                 onClick={() => confirmArrival(lot.lotNumber)}
                 className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 text-xs font-semibold transition"
               >
-                Confirm Arrival (Step 5)
+                Confirm Arrival
               </button>
             </div>
           )}
@@ -239,7 +258,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                 </span>
               </div>
               <div
-                className={`grid grid-cols-3 gap-2 pt-2 text-[11px] ${
+                className={`grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] ${
                   isBright ? 'text-slate-600' : 'text-neutral-400'
                 }`}
               >
@@ -272,11 +291,23 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     Current Karigar
                   </span>
                   <span
-                    className={`font-bold block ${
+                    className={`font-bold block truncate ${
                       isBright ? 'text-slate-900' : 'text-neutral-200'
                     }`}
                   >
                     {lot.currentKarigarName}
+                  </span>
+                </div>
+                <div>
+                  <span className={isBright ? 'text-slate-400' : 'text-neutral-500'}>
+                    {getStageWeightLabel(lot.currentStage, lot.branch)}
+                  </span>
+                  <span
+                    className={`font-bold font-mono block ${
+                      isBright ? 'text-amber-800' : 'text-amber-400'
+                    }`}
+                  >
+                    {(getStageAvgWeight(design, lot.currentStage, lot.branch) || 1.5).toFixed(3)} g/pc
                   </span>
                 </div>
               </div>
@@ -360,7 +391,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                           isBright ? 'text-slate-900' : 'text-neutral-200'
                         }`}
                       >
-                        {rec.weightSent.toFixed(2)} g
+                        {(rec.weightSent ?? 0).toFixed(2)} g
                       </span>
                     </div>
                     <div>
@@ -372,7 +403,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                           isBright ? 'text-slate-900' : 'text-neutral-200'
                         }`}
                       >
-                        {rec.weightReceived !== undefined ? `${rec.weightReceived.toFixed(2)} g` : 'Pending'}
+                        {rec.weightReceived !== undefined ? `${Number(rec.weightReceived || 0).toFixed(2)} g` : 'Pending'}
                       </span>
                     </div>
                     <div>
@@ -413,6 +444,15 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     <div className="mt-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-800 flex items-center gap-1.5">
                       <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>Discrepancy flagged: {rec.discrepancyGramsDiff}g variance observed.</span>
+                    </div>
+                  )}
+
+                  {rec.recalibratedAvgWeight !== undefined && (
+                    <div className="mt-2 p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-600 font-mono flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-500" />
+                      <span>
+                        Stage Calibrated {rec.recalibrationTarget ? `${rec.recalibrationTarget} baseline` : 'average weight'}: <strong>{rec.recalibratedAvgWeight} g/pc</strong>
+                      </span>
                     </div>
                   )}
                 </div>

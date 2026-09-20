@@ -47,12 +47,13 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
   const selectedDesign = designs.find((d) => d.id === designId);
   const selectedKarigar = karigars.find((k) => k.id === karigarId);
 
-  // Auto-fill estimated weight based on pieces * avg weight unless manually customized
+  // Auto-fill estimated weight based on pieces * wax avg weight (since new lots always start at Wax)
   useEffect(() => {
     if (selectedDesign && initialPieces && !isWeightManuallyEdited) {
       const p = parseInt(initialPieces, 10);
       if (p > 0) {
-        const estWeight = Number((p * selectedDesign.averageWeightPerPiece).toFixed(2));
+        const waxPerPiece = selectedDesign.waxAvgWeightPerPiece ?? 0.22;
+        const estWeight = Number((p * waxPerPiece).toFixed(2));
         setInitialWeight(estWeight.toString());
       }
     }
@@ -72,7 +73,8 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
     if (selectedDesign && initialPieces) {
       const p = parseInt(initialPieces, 10);
       if (p > 0) {
-        const estWeight = Number((p * selectedDesign.averageWeightPerPiece).toFixed(2));
+        const waxPerPiece = selectedDesign.waxAvgWeightPerPiece ?? 0.22;
+        const estWeight = Number((p * waxPerPiece).toFixed(2));
         setInitialWeight(estWeight.toString());
         setIsWeightManuallyEdited(false);
       }
@@ -84,7 +86,8 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
     const newPieces = isDirectSet ? piecesToAddOrSet : Math.max(1, current + piecesToAddOrSet);
     setInitialPieces(newPieces.toString());
     if (selectedDesign) {
-      const estWeight = Number((newPieces * selectedDesign.averageWeightPerPiece).toFixed(2));
+      const waxPerPiece = selectedDesign.waxAvgWeightPerPiece ?? 0.22;
+      const estWeight = Number((newPieces * waxPerPiece).toFixed(2));
       setInitialWeight(estWeight.toString());
       setIsWeightManuallyEdited(false);
     }
@@ -267,7 +270,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                 <option value="Casting">Casting (Stage 2)</option>
                 <option value="Buff">Buff (Stage 3)</option>
                 <option value="Zabora">Zabora (Stage 4)</option>
-                <option value="Dal">Dal (Stage 5)</option>
+                <option value="Dull">Dull (Stage 5)</option>
                 <option value="Chhol">Chhol (Stage 6)</option>
               </select>
             </div>
@@ -305,7 +308,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
             >
               {designs.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name} ({d.barcode}) &bull; Avg: {d.averageWeightPerPiece}g/pc
+                  {d.name} ({d.barcode}) &bull; Wax: {d.waxAvgWeightPerPiece}g/pc
                 </option>
               ))}
             </select>
@@ -352,7 +355,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                       }`}
                     >
                       <Scale className="w-3.5 h-3.5" />
-                      Baseline: {selectedDesign.averageWeightPerPiece} g/pc
+                      Wax Baseline: {selectedDesign.waxAvgWeightPerPiece} g/pc
                     </span>
                     <span
                       className={`text-[11px] ${

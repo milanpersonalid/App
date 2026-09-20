@@ -3,7 +3,7 @@ export type Stage =
   | 'Casting'
   | 'Buff'
   | 'Zabora'
-  | 'Dal'
+  | 'Dull'
   | 'Chhol'
   | 'Plating'
   | 'Ready Stock';
@@ -13,7 +13,7 @@ export const BASE_STAGES: Stage[] = [
   'Casting',
   'Buff',
   'Zabora',
-  'Dal',
+  'Dull',
   'Chhol',
 ];
 
@@ -22,12 +22,14 @@ export const ALL_ACTIVE_STAGES: Stage[] = [
   'Casting',
   'Buff',
   'Zabora',
-  'Dal',
+  'Dull',
   'Chhol',
   'Plating',
 ];
 
 export type BranchType = 'none' | 'plain' | 'gold';
+
+export type CalibrationTarget = 'wax' | 'metal' | 'plain' | 'gold';
 
 export type LotStatus =
   | 'in_progress'              // Step 1-4: Sent to karigar, work in progress
@@ -52,7 +54,10 @@ export interface Design {
   targetQuantity?: number;
   lowStockThreshold: number; // default 500, editable per design
   barcode: string;           // permanent barcode, e.g. "DES-82910"
-  averageWeightPerPiece: number; // in grams (Sample weight ÷ Sample piece count)
+  waxAvgWeightPerPiece: number;   // established at Wax stage
+  metalAvgWeightPerPiece: number; // established at/after Casting stage (heavier cast metal)
+  plainAvgWeightPerPiece: number; // established at Chhol stage for Plain branch (after filing)
+  goldAvgWeightPerPiece: number;  // established at Chhol stage for Gold branch (after filing, heading to Plating)
   sampleWeight: number;      // e.g. 150g
   samplePieceCount: number;  // e.g. 100 pcs
   fingerprint?: VisualFingerprint;
@@ -82,6 +87,7 @@ export interface LotStageRecord {
   weightLoss?: number;       // weightSent - weightReceived
   lossPercentage?: number;   // (weightLoss / weightSent) * 100
   recalibratedAvgWeight?: number; // if recalibration was performed
+  recalibrationTarget?: 'wax' | 'metal' | 'plain' | 'gold';
   completedAt?: string;
   isCompleted: boolean;
 }

@@ -54,8 +54,8 @@ export const INITIAL_KARIGARS: Karigar[] = [
   { id: 'kar-1', name: 'Ramesh Bhai', phone: '+91 98251 10293', specialtyStages: ['Wax', 'Casting'] },
   { id: 'kar-2', name: 'Mahesh Bhai', phone: '+91 98252 84721', specialtyStages: ['Wax', 'Buff'] },
   { id: 'kar-3', name: 'Suresh Bhai', phone: '+91 98983 23419', specialtyStages: ['Buff', 'Zabora'] },
-  { id: 'kar-4', name: 'Ketan Bhai', phone: '+91 94284 98712', specialtyStages: ['Zabora', 'Dal'] },
-  { id: 'kar-5', name: 'Bharat Bhai', phone: '+91 98795 34561', specialtyStages: ['Dal', 'Chhol'] },
+  { id: 'kar-4', name: 'Ketan Bhai', phone: '+91 94284 98712', specialtyStages: ['Zabora', 'Dull'] },
+  { id: 'kar-5', name: 'Bharat Bhai', phone: '+91 98795 34561', specialtyStages: ['Dull', 'Chhol'] },
   { id: 'kar-6', name: 'Mansukh Bhai', phone: '+91 99096 11284', specialtyStages: ['Chhol'] },
   { id: 'kar-7', name: 'Paresh Bhai', phone: '+91 98247 67120', specialtyStages: ['Plating'] },
   { id: 'kar-8', name: 'Jignesh Bhai', phone: '+91 97238 54329', specialtyStages: ['Wax', 'Casting', 'Buff'] },
@@ -70,8 +70,11 @@ export const INITIAL_DESIGNS: Design[] = [
     targetQuantity: 1500,
     lowStockThreshold: 500,
     barcode: 'DES-108501',
-    averageWeightPerPiece: 1.62, // 162g / 100pcs
-    sampleWeight: 162.0,
+    waxAvgWeightPerPiece: 0.22, // 22g wax / 100pcs
+    metalAvgWeightPerPiece: 1.62, // 162g raw metal / 100pcs
+    plainAvgWeightPerPiece: 1.48, // after filing for plain
+    goldAvgWeightPerPiece: 1.54, // after filing for gold plating
+    sampleWeight: 22.0,
     samplePieceCount: 100,
     fingerprint: {
       dominantHue: 42,
@@ -92,8 +95,11 @@ export const INITIAL_DESIGNS: Design[] = [
     targetQuantity: 2000,
     lowStockThreshold: 450,
     barcode: 'DES-108502',
-    averageWeightPerPiece: 2.20, // 176g / 80pcs
-    sampleWeight: 176.0,
+    waxAvgWeightPerPiece: 0.30,
+    metalAvgWeightPerPiece: 2.20,
+    plainAvgWeightPerPiece: 2.02,
+    goldAvgWeightPerPiece: 2.10,
+    sampleWeight: 24.0,
     samplePieceCount: 80,
     fingerprint: {
       dominantHue: 48,
@@ -114,8 +120,11 @@ export const INITIAL_DESIGNS: Design[] = [
     targetQuantity: 1200,
     lowStockThreshold: 500, // Trigger low stock alert to test!
     barcode: 'DES-108503',
-    averageWeightPerPiece: 1.30, // 156g / 120pcs
-    sampleWeight: 156.0,
+    waxAvgWeightPerPiece: 0.18,
+    metalAvgWeightPerPiece: 1.30,
+    plainAvgWeightPerPiece: 1.18,
+    goldAvgWeightPerPiece: 1.23,
+    sampleWeight: 21.6,
     samplePieceCount: 120,
     fingerprint: {
       dominantHue: 38,
@@ -136,8 +145,11 @@ export const INITIAL_DESIGNS: Design[] = [
     targetQuantity: 1000,
     lowStockThreshold: 350,
     barcode: 'DES-108504',
-    averageWeightPerPiece: 1.85, // 185g / 100pcs
-    sampleWeight: 185.0,
+    waxAvgWeightPerPiece: 0.26,
+    metalAvgWeightPerPiece: 1.85,
+    plainAvgWeightPerPiece: 1.68,
+    goldAvgWeightPerPiece: 1.74,
+    sampleWeight: 26.0,
     samplePieceCount: 100,
     fingerprint: {
       dominantHue: 35,
@@ -373,13 +385,13 @@ export const INITIAL_LOTS: Lot[] = [
         completedAt: '2026-09-10',
       },
       {
-        stage: 'Dal',
+        stage: 'Dull',
         karigarId: 'kar-5',
         karigarName: 'Bharat Bhai',
         dateSent: '2026-09-10',
         weightSent: 504.4,
         piecesSent: 388,
-        qrData: generateLotStageQrPayload('LOT-904', 'Dal', 'Bharat Bhai', '2026-09-10'),
+        qrData: generateLotStageQrPayload('LOT-904', 'Dull', 'Bharat Bhai', '2026-09-10'),
         weightReceived: 501.8,
         estimatedPieces: 386,
         statedPieces: 386,

@@ -54,7 +54,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     'Casting',
     'Buff',
     'Zabora',
-    'Dal',
+    'Dull',
     'Chhol',
     'Plating',
   ];
@@ -220,7 +220,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   isBright ? 'text-[#C86349]' : 'text-red-300'
                 }`}
               >
-                Awaiting Data Entry — Step 6 ({filteredAwaitingLots.length} Lots)
+                Awaiting Return Data Entry ({filteredAwaitingLots.length} Lots)
               </h3>
             </div>
           </div>
@@ -317,7 +317,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   isBright ? 'text-emerald-800' : 'text-emerald-300'
                 }`}
               >
-                Stage Completed — Pick Next Stage (Step 7) ({filteredStageCompleteLots.length} Lots)
+                Stage Completed — Ready for Next Stage ({filteredStageCompleteLots.length} Lots)
               </h3>
             </div>
             <span className={`text-[11px] ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
@@ -435,7 +435,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </h3>
           </div>
 
-          <div className="flex flex-col gap-3">
+          {/* 2-COLUMN GRID (2 STAGES PER ROW) */}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             {filteredStages.map((stage) => {
             const { working, idle } = getKarigarStatusForStage(stage);
             const stageLots = lots.filter(
@@ -455,75 +456,72 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div
                 key={stage}
                 onClick={() => onSelectStage(stage)}
-                className={`group relative p-3.5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${
+                className={`group relative p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${
                   isBright
                     ? 'bg-white border-[#D4D4D8] hover:border-[#E07A5F] hover:shadow-md'
                     : 'bg-[#292930] border-[#3F3F46] hover:border-[#E07A5F]/60 hover:bg-[#34343D]'
                 }`}
               >
                 <div>
-                  {/* Branch Tag if applicable */}
-                  {(isChhol || isPlating) && (
-                    <div className="flex items-center justify-end mb-2">
-                      {isChhol && (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 border border-blue-500/30">
-                          BRANCHING POINT
-                        </span>
-                      )}
+                  {/* Stage Name & Optional Branch Tag (unified top row for uniform height across all cards) */}
+                  <div className="flex items-center justify-between gap-1 min-h-[26px]">
+                    <h4
+                      className={`text-base sm:text-lg font-bold transition font-brand ${
+                        isBright
+                          ? 'text-[#27272A] group-hover:text-[#E07A5F]'
+                          : 'text-[#F4F4F6] group-hover:text-[#E8998D]'
+                      }`}
+                    >
+                      {stage}
+                    </h4>
 
-                      {isPlating && (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#E07A5F]/15 text-[#E07A5F] border border-[#E07A5F]/30">
-                          GOLD BRANCH ONLY
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    {isChhol && (
+                      <span className="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 border border-blue-500/30 shrink-0">
+                        BRANCH
+                      </span>
+                    )}
 
-                  {/* Stage Name */}
-                  <h4
-                    className={`text-lg font-bold transition font-brand ${
-                      isBright
-                        ? 'text-[#27272A] group-hover:text-[#E07A5F]'
-                        : 'text-[#F4F4F6] group-hover:text-[#E8998D]'
-                    }`}
-                  >
-                    {stage}
-                  </h4>
+                    {isPlating && (
+                      <span className="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#E07A5F]/15 text-[#E07A5F] border border-[#E07A5F]/30 shrink-0">
+                        GOLD
+                      </span>
+                    )}
+                  </div>
 
-                  {/* SPEC SPECIFIC LIVE COUNT: "X karigars currently working / Y idle" */}
+                  {/* SPEC SPECIFIC LIVE COUNT: "X working / Y idle" */}
                   <div
-                    className={`mt-3 p-3 rounded-xl border flex items-center justify-between ${
+                    className={`mt-2 p-2 rounded-xl border flex flex-col gap-0.5 ${
                       isBright
                         ? 'bg-[#F4F4F6] border-[#E4E4E7]'
                         : 'bg-[#1E1E24] border-[#3F3F46]'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-[#E07A5F]" />
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-[#E07A5F] shrink-0" />
                       <span
-                        className={`font-bold text-xs ${
+                        className={`font-bold text-[11px] sm:text-xs leading-tight ${
                           isBright ? 'text-[#27272A]' : 'text-neutral-200'
                         }`}
                       >
-                        {working.length} working / {idle.length} idle
+                        {working.length} working &bull; {idle.length} idle
                       </span>
                     </div>
                     <span
-                      className={`text-[10px] font-mono ${
+                      className={`text-[9px] font-mono ${
                         isBright ? 'text-[#71717A]' : 'text-neutral-400'
                       }`}
                     >
-                      {working.length + idle.length} assigned
+                      {working.length + idle.length} assigned karigars
                     </span>
                   </div>
 
                   {/* Lots in this Stage */}
                   <div
-                    className={`mt-3 flex items-center justify-between text-xs ${
+                    className={`mt-2 flex items-center justify-between text-[11px] ${
                       isBright ? 'text-[#71717A]' : 'text-neutral-400'
                     }`}
                   >
-                    <span>Lots at this stage:</span>
+                    <span>Lots:</span>
                     <span
                       className={`font-mono font-bold ${
                         isBright ? 'text-[#27272A]' : 'text-neutral-200'
@@ -535,15 +533,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                   {/* Status badges if any awaiting entry or completed */}
                   {(awaitingInStage > 0 || completedInStage > 0) && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="mt-1.5 flex flex-wrap gap-1">
                       {awaitingInStage > 0 && (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 font-bold border border-rose-500/30 animate-pulse">
-                          {awaitingInStage} awaiting entry
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-600 font-bold border border-rose-500/30 animate-pulse">
+                          {awaitingInStage} awaiting
                         </span>
                       )}
                       {completedInStage > 0 && (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 font-bold border border-emerald-500/30">
-                          {completedInStage} complete
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 font-bold border border-emerald-500/30">
+                          {completedInStage} done
                         </span>
                       )}
                     </div>
@@ -552,14 +550,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 {/* Bottom detail action */}
                 <div
-                  className={`pt-4 mt-3 border-t flex items-center justify-between text-xs transition ${
+                  className={`pt-2.5 mt-2.5 border-t flex items-center justify-between text-[10px] sm:text-[11px] transition ${
                     isBright
                       ? 'border-[#E4E4E7] text-[#71717A] group-hover:text-[#E07A5F]'
                       : 'border-[#3F3F46] text-neutral-400 group-hover:text-[#E8998D]'
                   }`}
                 >
-                  <span className="font-medium text-[11px]">View Karigars &amp; Lots</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition" />
+                  <span className="font-medium">View Stage</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition shrink-0" />
                 </div>
               </div>
             );
