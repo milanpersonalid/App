@@ -87,10 +87,10 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
 
   // Editable slip parameters matching user's workshop custom slip
   const defaultProcess = useMemo(() => {
-    if (selectedStageName === 'Wax') return 'WAX (MICRO)';
-    if (selectedStageName === 'Casting') return 'CASTING (GOLD)';
-    return `${selectedStageName.toUpperCase()} (MICRO)`;
-  }, [selectedStageName]);
+    if (selectedStageName === 'Wax') return 'WAX';
+    if (selectedStageName === 'Casting') return lot.branch === 'gold' ? 'CASTING (GOLD)' : 'CASTING';
+    return selectedStageName.toUpperCase();
+  }, [selectedStageName, lot.branch]);
 
   const [processTitle, setProcessTitle] = useState<string>(defaultProcess);
   const [amountValue, setAmountValue] = useState<string>('1250');
@@ -317,7 +317,7 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                     ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A]'
                     : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                 }`}
-                placeholder="e.g. GOLD (MICRO)"
+                placeholder="e.g. WAX, CASTING, BUFF"
               />
             </div>
 
@@ -575,7 +575,7 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
               </div>
             </div>
 
-            {/* Micro verification line */}
+            {/* Slip verification line */}
             <div className="text-[8.5px] font-mono text-neutral-500 flex items-center justify-between pt-2 mt-2 border-t border-dotted border-neutral-400">
               <span>Shreenathji Imitation &bull; Stage: {selectedStageName}</span>
               <span>Dynamic QR changes per stage</span>

@@ -381,7 +381,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-[11px]">
                     <div>
                       <span className={isBright ? 'text-slate-500 block' : 'text-neutral-500 block'}>
                         Weight Sent
@@ -408,16 +408,26 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     </div>
                     <div>
                       <span className={isBright ? 'text-slate-500 block' : 'text-neutral-500 block'}>
-                        Stated / Est. Pcs
+                        Estimated Pcs (DB)
+                      </span>
+                      <span
+                        className={`font-mono font-bold ${
+                          isBright ? 'text-emerald-700' : 'text-emerald-400'
+                        }`}
+                      >
+                        {rec.estimatedPieces !== undefined ? `${rec.estimatedPieces} pcs` : 'Pending'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className={isBright ? 'text-slate-500 block' : 'text-neutral-500 block'}>
+                        Good Received (Slip)
                       </span>
                       <span
                         className={`font-mono font-bold ${
                           isBright ? 'text-slate-900' : 'text-neutral-200'
                         }`}
                       >
-                        {rec.statedPieces !== undefined
-                          ? `${rec.statedPieces} / ${rec.estimatedPieces || '—'}`
-                          : 'Pending'}
+                        {rec.statedPieces !== undefined ? `${rec.statedPieces} pcs` : 'Pending'}
                       </span>
                     </div>
                     <div>
@@ -433,6 +443,21 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                       </span>
                     </div>
                   </div>
+
+                  {rec.isCompleted && rec.statedPieces !== undefined && rec.piecesSent !== undefined && (
+                    <div className="mt-2 pt-2 border-t border-dashed border-neutral-700/50 text-[10px] font-mono flex items-center justify-between flex-wrap gap-1">
+                      <span className={isBright ? 'text-slate-600' : 'text-neutral-400'}>
+                        Reconciliation: Sent ({rec.piecesSent}) = Good ({rec.statedPieces}) + Rej ({rec.rejectedPieces || 0}) + Miss ({Math.max(0, rec.piecesSent - rec.statedPieces - (rec.rejectedPieces || 0))})
+                      </span>
+                      <span className={`font-semibold ${
+                        (rec.piecesLoss ?? (Math.max(0, rec.piecesSent - rec.statedPieces - (rec.rejectedPieces || 0)) + (rec.rejectedPieces || 0))) > 0
+                          ? isBright ? 'text-[#C85235]' : 'text-amber-400'
+                          : 'text-emerald-500'
+                      }`}>
+                        Piece Loss: {rec.piecesLoss ?? (Math.max(0, rec.piecesSent - rec.statedPieces - (rec.rejectedPieces || 0)) + (rec.rejectedPieces || 0))} pcs
+                      </span>
+                    </div>
+                  )}
 
                   {rec.rejectedPieces !== undefined && rec.rejectedPieces > 0 && (
                     <div className="mt-2 text-[10px] text-amber-500 font-mono font-semibold">

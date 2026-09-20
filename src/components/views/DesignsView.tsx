@@ -218,8 +218,16 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                       <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
                         Post-Chhol Plain
                       </span>
-                      <span className="font-mono font-bold text-xs text-emerald-500">
-                        {(design.plainAvgWeightPerPiece ?? 1.4).toFixed(4)} g
+                      <span
+                        className={`font-mono font-bold text-xs ${
+                          design.plainAvgWeightPerPiece && design.plainAvgWeightPerPiece > 0
+                            ? 'text-emerald-500'
+                            : isBright ? 'text-[#C85235] text-[11px]' : 'text-amber-400/90 text-[11px]'
+                        }`}
+                      >
+                        {design.plainAvgWeightPerPiece && design.plainAvgWeightPerPiece > 0
+                          ? `${design.plainAvgWeightPerPiece.toFixed(4)} g`
+                          : 'Pending Chhol'}
                       </span>
                     </div>
 
@@ -227,8 +235,16 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                       <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
                         Post-Chhol Gold
                       </span>
-                      <span className="font-mono font-bold text-xs text-amber-400">
-                        {(design.goldAvgWeightPerPiece ?? 1.45).toFixed(4)} g
+                      <span
+                        className={`font-mono font-bold text-xs ${
+                          design.goldAvgWeightPerPiece && design.goldAvgWeightPerPiece > 0
+                            ? 'text-amber-400'
+                            : isBright ? 'text-[#C85235] text-[11px]' : 'text-amber-400/90 text-[11px]'
+                        }`}
+                      >
+                        {design.goldAvgWeightPerPiece && design.goldAvgWeightPerPiece > 0
+                          ? `${design.goldAvgWeightPerPiece.toFixed(4)} g`
+                          : 'Pending Chhol'}
                       </span>
                     </div>
                   </div>

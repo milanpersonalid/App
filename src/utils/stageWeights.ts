@@ -88,11 +88,26 @@ export function getStageAvgWeight(
 }
 
 /**
- * Indicates whether piece estimation from weight is valid at this stage.
- * At Chhol, pieces are NOT estimated from weight because material is physically shaved/filed off.
+ * Checks whether the specific ruler for a design at a given stage/branch is already established (> 0).
  */
-export function isWeightEstimationApplicable(stage: Stage): boolean {
-  return stage !== 'Chhol';
+export function isStageRulerSet(
+  design: Design | undefined,
+  stage: Stage,
+  branch: BranchType = 'none'
+): boolean {
+  if (!design) return false;
+  const key = getStageWeightKey(stage, branch);
+  const val = design[key];
+  return typeof val === 'number' && !isNaN(val) && val > 0;
+}
+
+/**
+ * Indicates whether piece estimation from weight is valid.
+ * At every stage in the factory, the piece count is calculated automatically:
+ * estimated pieces = weight entered ÷ stage ruler.
+ */
+export function isWeightEstimationApplicable(_stage?: Stage): boolean {
+  return true;
 }
 
 /**

@@ -59,6 +59,7 @@ interface AppContextType {
     lotId: string,
     entry: {
       weightReceived: number;
+      estimatedPieces?: number; // Weight-based estimated pieces column (supports manual override)
       statedPieces: number;
       rejectedPieces: number;
       recalibratedAvgWeight?: number;
@@ -160,12 +161,12 @@ const sanitizeDesigns = (rawDesigns: any[]): Design[] => {
     const plainAvg =
       typeof d.plainAvgWeightPerPiece === 'number' && !isNaN(d.plainAvgWeightPerPiece) && d.plainAvgWeightPerPiece > 0
         ? d.plainAvgWeightPerPiece
-        : Number((metalAvg * 0.92).toFixed(4));
+        : 0;
 
     const goldAvg =
       typeof d.goldAvgWeightPerPiece === 'number' && !isNaN(d.goldAvgWeightPerPiece) && d.goldAvgWeightPerPiece > 0
         ? d.goldAvgWeightPerPiece
-        : Number((metalAvg * 0.95).toFixed(4));
+        : 0;
 
     return {
       ...d,
@@ -249,8 +250,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const waxAvg = Number((data.sampleWeight / Math.max(1, data.samplePieceCount)).toFixed(4));
     // Initial estimates until calibrated during stages (Casting establishes metal, Chhol establishes plain/gold)
     const metalEst = Number((waxAvg * 7.4).toFixed(4));
-    const plainEst = Number((metalEst * 0.92).toFixed(4));
-    const goldEst = Number((metalEst * 0.95).toFixed(4));
+    // Plain and Gold branch rulers will be established when the lot reaches Chhol stage
+    const plainEst = 0;
+    const goldEst = 0;
     
     // Barcode auto-generated and saved the moment a design is created
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
@@ -474,6 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lotId: string,
     entry: {
       weightReceived: number;
+      estimatedPieces?: number;
       statedPieces: number;
       rejectedPieces: number;
       recalibratedAvgWeight?: number;
@@ -491,7 +494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const stage = lot.currentStage;
     const effectiveBranch = entry.chholBranchTarget || lot.branch;
     const avgWeight = getStageAvgWeight(design, stage, effectiveBranch);
-    const canEstimatePieces = isWeightEstimationApplicable(stage); // false for Chhol
+    const effectiveRuler = entry.recalibratedAvgWeight || (avgWeight > 0 ? avgWeight : 1.5);
 
     const history = [...lot.history];
     const currentRecIndex = history.length - 1;
@@ -503,33 +506,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const weightSent = currentRecord.weightSent;
     const weightReceived = entry.weightReceived;
 
-    let estimatedPieces: number | undefined = undefined;
-    let hasDiscrepancy = false;
-    let weightDiffGrams: number | undefined = undefined;
+    // 2. Estimated pieces column in DB: Use manual value if provided by admin, otherwise auto-calculate Weight received ÷ Ruler
+    const calculatedEstimatedPieces = Math.round(weightReceived / Math.max(0.01, effectiveRuler));
+    const estimatedPieces =
+      typeof entry.estimatedPieces === 'number' && !isNaN(entry.estimatedPieces) && entry.estimatedPieces >= 0
+        ? entry.estimatedPieces
+        : calculatedEstimatedPieces;
 
-    if (canEstimatePieces) {
-      // 2. Estimated pieces = Weight received ÷ Average weight per piece for this stage
-      estimatedPieces = Math.round(weightReceived / Math.max(0.01, avgWeight));
-
-      // 4. Discrepancy warning if stated pieces don't reasonably match estimated pieces
-      // A gram or two of natural variance is normal; large unexplained jump warns
-      const theoreticalWeightForStated = entry.statedPieces * avgWeight;
-      const diffGrams = Math.abs(weightReceived - theoreticalWeightForStated);
-      weightDiffGrams = Number(diffGrams.toFixed(2));
-      const piecesDiff = Math.abs(estimatedPieces - entry.statedPieces);
-      hasDiscrepancy = diffGrams > 2.0 || piecesDiff > Math.max(3, estimatedPieces * 0.03);
-    } else {
-      // For Chhol stage:
-      // Compare received piece count directly against the pieces sent into this stage
-      const piecesSent = currentRecord.piecesSent;
-      const expectedPieces = piecesSent - entry.rejectedPieces;
-      const pieceVariance = Math.abs(entry.statedPieces - expectedPieces);
-      hasDiscrepancy = pieceVariance > 2;
-    }
+    // 4. Discrepancy warning if stated pieces don't reasonably match estimated pieces
+    // A gram or two of natural variance is normal; large unexplained jump warns
+    const theoreticalWeightForStated = entry.statedPieces * effectiveRuler;
+    const diffGrams = Math.abs(weightReceived - theoreticalWeightForStated);
+    const weightDiffGrams = Number(diffGrams.toFixed(2));
+    const piecesDiff = Math.abs(estimatedPieces - entry.statedPieces);
+    const hasDiscrepancy = diffGrams > 2.0 || piecesDiff > Math.max(3, estimatedPieces * 0.03);
 
     // 6. Weight loss = Weight sent - Weight received
     const weightLoss = Number(Math.max(0, weightSent - weightReceived).toFixed(3));
     const lossPercentage = Number(((weightLoss / Math.max(0.1, weightSent)) * 100).toFixed(2));
+    const missingPieces = Math.max(
+      0,
+      (currentRecord.piecesSent ?? 0) - entry.statedPieces - (entry.rejectedPieces || 0)
+    );
+    const piecesLoss = missingPieces + (entry.rejectedPieces || 0);
 
     const completedAt = new Date().toISOString().split('T')[0];
 
@@ -551,6 +550,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       rejectedPieces: entry.rejectedPieces,
       weightLoss,
       lossPercentage,
+      piecesLoss,
       recalibratedAvgWeight: entry.recalibratedAvgWeight,
       recalibrationTarget: entry.recalibratedAvgWeight ? targetField : undefined,
       isCompleted: true,
@@ -599,7 +599,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const lot = lots[lotIndex];
     const lastRecord = lot.history[lot.history.length - 1];
     const prevWeightReceived = lastRecord?.weightReceived ?? lot.initialWeight;
-    const prevPieces = (lastRecord?.statedPieces ?? lot.initialPieces) - (lastRecord?.rejectedPieces ?? 0);
+    const prevPieces = lastRecord?.statedPieces ?? lot.initialPieces;
     const now = new Date().toISOString().split('T')[0];
 
     if (nextStage === 'Ready Stock') {

@@ -86,6 +86,7 @@ export interface LotStageRecord {
   rejectedPieces?: number;   // manual field, never from weight
   weightLoss?: number;       // weightSent - weightReceived
   lossPercentage?: number;   // (weightLoss / weightSent) * 100
+  piecesLoss?: number;       // total lost pieces at this stage (missing + rejected)
   recalibratedAvgWeight?: number; // if recalibration was performed
   recalibrationTarget?: 'wax' | 'metal' | 'plain' | 'gold';
   completedAt?: string;
