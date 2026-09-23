@@ -256,23 +256,29 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print cursor-pointer"
+    >
       <div
-        className={`relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden my-6 max-w-full transition-colors ${
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-xl my-auto rounded-2xl border shadow-2xl overflow-hidden max-h-[92vh] flex flex-col max-w-full cursor-default transition-colors ${
           isBright
             ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
             : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'
         }`}
       >
-        {/* Header */}
+        {/* Header (Pinned at top) */}
         <div
-          className={`flex items-center justify-between px-6 py-4.5 border-b transition-colors ${
+          className={`flex items-center justify-between px-5 sm:px-6 py-3.5 sm:py-4 border-b shrink-0 transition-colors ${
             isBright
               ? 'bg-[#F4F4F6] border-[#D4D4D8]'
               : 'bg-[#1E1E24] border-[#3F3F46]'
           }`}
         >
-          <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex items-center gap-3.5 min-w-0 flex-1 mr-2">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${
                 isBright
@@ -282,37 +288,42 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
             >
               <Scale className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3
-                  className={`font-bold text-base tracking-tight ${
-                    isBright ? 'text-[#27272A]' : 'text-neutral-100'
+                  className={`font-bold text-sm sm:text-base tracking-tight ${
+                    isBright ? 'text-[#18181B]' : 'text-neutral-100'
                   }`}
                 >
                   Enter Stage Weight
                 </h3>
                 <span
-                  className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border transition-colors ${
+                  className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border shadow-2xs transition-colors ${
                     isBright
-                      ? 'bg-[#FAF0ED] text-[#C85235] border-[#E8998D]/60'
-                      : 'bg-neutral-800/90 text-amber-400 border-neutral-700/80'
+                      ? 'bg-amber-50 text-amber-900 border-amber-200'
+                      : 'bg-amber-950/60 text-amber-300 border-amber-700/60'
                   }`}
                 >
                   {lot.lotNumber}
                 </span>
+                <span
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
+                    isBright
+                      ? 'bg-slate-100 text-slate-700 border-slate-200'
+                      : 'bg-neutral-800/80 text-neutral-300 border-neutral-700'
+                  }`}
+                >
+                  {lot.currentStage}
+                </span>
               </div>
               <div
                 className={`flex items-center gap-2 mt-1 text-xs ${
-                  isBright ? 'text-[#71717A]' : 'text-neutral-400'
+                  isBright ? 'text-[#52525B]' : 'text-neutral-300'
                 }`}
               >
-                <span className={isBright ? 'text-[#27272A] font-medium' : 'text-neutral-200 font-medium'}>
-                  {lot.currentStage}
-                </span>
-                <span className={isBright ? 'text-[#A1A1AA]' : 'text-neutral-600'}>&bull;</span>
-                <span>
+                <span className="truncate">
                   Karigar:{' '}
-                  <strong className={isBright ? 'text-[#27272A] font-medium' : 'text-neutral-200 font-medium'}>
+                  <strong className={isBright ? 'text-[#18181B] font-semibold' : 'text-amber-300 font-semibold'}>
                     {lot.currentKarigarName}
                   </strong>
                 </span>
@@ -331,8 +342,10 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4.5">
+        {/* Form with scrollable body and pinned action footer */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-6 space-y-4.5 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           {error && (
             <div
               className={`p-3 text-xs rounded-xl border flex items-center gap-2 ${
@@ -1088,14 +1101,20 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className={`flex items-center justify-end gap-2.5 pt-2 border-t ${isBright ? 'border-[#D4D4D8]' : 'border-neutral-800'}`}>
+          </div>
+
+          {/* Action buttons (Pinned at bottom of modal) */}
+          <div
+            className={`flex items-center justify-end gap-2.5 px-5 sm:px-6 py-3.5 border-t shrink-0 ${
+              isBright ? 'bg-[#F4F4F6] border-[#D4D4D8]' : 'bg-[#1E1E24] border-neutral-800'
+            }`}
+          >
             <button
               type="button"
               onClick={onClose}
               className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors ${
                 isBright
-                  ? 'bg-[#F4F4F6] hover:bg-[#EBEBEF] text-[#27272A] border border-[#D4D4D8]'
+                  ? 'bg-[#FFFFFF] hover:bg-[#EBEBEF] text-[#27272A] border border-[#D4D4D8]'
                   : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
               }`}
             >

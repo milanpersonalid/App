@@ -119,10 +119,18 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
-      <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden my-6 max-w-full">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg my-auto max-h-[92vh] flex flex-col bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden max-w-full cursor-default"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-950">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-950 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
               <ArrowRight className="w-5 h-5" />
@@ -143,7 +151,8 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-6 space-y-5 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
           {error && (
             <div className="p-3 text-xs rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 flex-shrink-0" />
@@ -241,8 +250,10 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
             </div>
           )}
 
+          </div>
+
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-800">
+          <div className="flex items-center justify-end gap-3 px-6 py-3.5 border-t border-neutral-800 bg-neutral-950 shrink-0">
             <button
               type="button"
               onClick={onClose}
