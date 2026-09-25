@@ -317,10 +317,19 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                 </span>
               </div>
               <div
-                className={`flex items-center gap-2 mt-1 text-xs ${
+                className={`flex items-center gap-2 mt-1 text-xs flex-wrap ${
                   isBright ? 'text-[#52525B]' : 'text-neutral-300'
                 }`}
               >
+                <span
+                  className={`truncate max-w-[200px] sm:max-w-xs font-medium ${
+                    isBright ? 'text-[#27272A]' : 'text-neutral-200'
+                  }`}
+                  title={design.name}
+                >
+                  {design.name}
+                </span>
+                <span className={isBright ? 'text-[#A1A1AA]' : 'text-neutral-500'}>&bull;</span>
                 <span className="truncate">
                   Karigar:{' '}
                   <strong className={isBright ? 'text-[#18181B] font-semibold' : 'text-amber-300 font-semibold'}>
