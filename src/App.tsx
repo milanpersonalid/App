@@ -9,10 +9,6 @@ import { Capacitor } from '@capacitor/core';
 import { AppProvider, useApp } from './context/AppContext';
 import { ActiveTab } from './components/Navigation';
 import { DashboardView } from './components/views/DashboardView';
-import { DesignsView } from './components/views/DesignsView';
-import { LotsView } from './components/views/LotsView';
-import { ReadyStockView } from './components/views/ReadyStockView';
-import { KarigarLedgerView } from './components/views/KarigarLedgerView';
 
 // Android Framework Components
 import { AndroidDeviceFrame } from './components/android/AndroidDeviceFrame';
@@ -22,14 +18,6 @@ import { AndroidQuickFab } from './components/android/AndroidQuickFab';
 import { AndroidRecentsModal } from './components/android/AndroidRecentsModal';
 
 // Modals
-import { StageSlipModal } from './components/StageSlipModal';
-import { Step6DataEntryModal } from './components/Step6DataEntryModal';
-import { Step7NextStageModal } from './components/Step7NextStageModal';
-import { ScannerModal } from './components/ScannerModal';
-import { StageDetailModal } from './components/StageDetailModal';
-import { CreateDesignModal } from './components/CreateDesignModal';
-import { CreateLotModal } from './components/CreateLotModal';
-import { LotDetailModal } from './components/LotDetailModal';
 import { ProfileModal } from './components/ProfileModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LoginScreen } from './components/LoginScreen';
@@ -37,6 +25,27 @@ import { AdminUsersModal } from './components/AdminUsersModal';
 
 import { AuthAndThemeProvider, useAuthAndTheme } from './context/AuthAndThemeContext';
 import { Design, Lot, Stage } from './types';
+
+// These large workflow screens are only needed after a user chooses an action.
+// Loading them on demand keeps the dashboard fast on slower office networks.
+const StageSlipModal = React.lazy(() => import('./components/StageSlipModal').then((module) => ({ default: module.StageSlipModal })));
+const Step6DataEntryModal = React.lazy(() => import('./components/Step6DataEntryModal').then((module) => ({ default: module.Step6DataEntryModal })));
+const Step7NextStageModal = React.lazy(() => import('./components/Step7NextStageModal').then((module) => ({ default: module.Step7NextStageModal })));
+const ScannerModal = React.lazy(() => import('./components/ScannerModal').then((module) => ({ default: module.ScannerModal })));
+const StageDetailModal = React.lazy(() => import('./components/StageDetailModal').then((module) => ({ default: module.StageDetailModal })));
+const CreateDesignModal = React.lazy(() => import('./components/CreateDesignModal').then((module) => ({ default: module.CreateDesignModal })));
+const CreateLotModal = React.lazy(() => import('./components/CreateLotModal').then((module) => ({ default: module.CreateLotModal })));
+const LotDetailModal = React.lazy(() => import('./components/LotDetailModal').then((module) => ({ default: module.LotDetailModal })));
+const DesignsView = React.lazy(() => import('./components/views/DesignsView').then((module) => ({ default: module.DesignsView })));
+const LotsView = React.lazy(() => import('./components/views/LotsView').then((module) => ({ default: module.LotsView })));
+const ReadyStockView = React.lazy(() => import('./components/views/ReadyStockView').then((module) => ({ default: module.ReadyStockView })));
+const KarigarLedgerView = React.lazy(() => import('./components/views/KarigarLedgerView').then((module) => ({ default: module.KarigarLedgerView })));
+
+const ModalLoading: React.FC = () => (
+  <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/30" aria-label="Opening screen">
+    <div className="w-7 h-7 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+  </div>
+);
 
 const StartupSplash: React.FC = () => (
   <div className="flex-1 min-h-0 flex items-center justify-center bg-white">
@@ -287,6 +296,7 @@ const MainApp: React.FC = () => {
               isBright ? 'bg-[#FAF7F2]' : 'bg-[#1E1C1A]'
             }`}
           >
+            <React.Suspense fallback={<div className="p-6 text-center text-xs text-neutral-400">Loading screen…</div>}>
             {activeTab === 'dashboard' && (
               <DashboardView
                 onSelectStage={(stage) => setSelectedStageDetail(stage)}
@@ -323,6 +333,7 @@ const MainApp: React.FC = () => {
             )}
 
             {activeTab === 'ledger' && <KarigarLedgerView />}
+            </React.Suspense>
           </div>
 
           {/* Android Floating Quick Action Buttons */}
@@ -352,6 +363,7 @@ const MainApp: React.FC = () => {
       )}
 
       {/* ALL MODALS (STAGE DETAIL, LOT DETAIL, STEP 6, STEP 7, STAGE SLIP, SCANNER, PROFILE, SETTINGS) */}
+      <React.Suspense fallback={<ModalLoading />}>
 
       {/* Stage Detail Modal (Base Layer: z-50) */}
       {selectedStageDetail && (
@@ -468,6 +480,7 @@ const MainApp: React.FC = () => {
           }}
         />
       )}
+      </React.Suspense>
 
       {/* User Profile Modal */}
       <ProfileModal

@@ -5,6 +5,7 @@ import { generateQrCodeDataUrl, generateBarcodeSvg, generateLotStageQrPayload } 
 import { Printer, X, ShieldCheck, Languages, Check, RefreshCw, Eye, Edit3 } from 'lucide-react';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import { SearchableSelect } from './SearchableSelect';
+import { formatJobWorkRate, getStageRateBasis, rateBasisLabel } from '../utils/stagePricing';
 
 interface StageSlipModalProps {
   lot: Lot;
@@ -120,6 +121,13 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
   }, [selectedRecord]);
 
   const isWaxSlip = selectedStageName === 'Wax';
+  const rateBasis = selectedRecord?.jobWorkRateBasis ?? getStageRateBasis(selectedStageName);
+  const rateText = selectedRecord?.jobWorkRate == null
+    ? '—'
+    : formatJobWorkRate(selectedRecord.jobWorkRate, rateBasis);
+  const totalText = selectedRecord?.jobWorkAmount == null
+    ? '—'
+    : `₹${selectedRecord.jobWorkAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
   const weightSent = selectedRecord?.weightSent ?? (isWaxSlip ? 0 : lot.initialWeight) ?? 0;
   const piecesSent = selectedRecord?.piecesSent ?? (isWaxSlip ? 0 : lot.initialPieces) ?? 0;
   const waxReceivedWeight = selectedRecord?.weightReceived ?? lot.initialWeight;
@@ -352,11 +360,11 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
             {/* Amount / રકમ */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Amount (₹) / રકમ:
+                Rate & Total / દર અને રકમ:
               </label>
               <input
                 type="text"
-                value={amountValue}
+                value={selectedRecord?.jobWorkRate == null ? (amountValue ? `Total ₹${amountValue}` : '') : `${rateText} • Total ${totalText}`}
                 readOnly
                 className={`py-1 px-2 rounded-lg border font-mono text-xs font-semibold outline-none transition ${
                   isBright
@@ -364,7 +372,7 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                     : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                 }`}
                 placeholder="Not recorded"
-                title="Saved when this stage was dispatched"
+                title={`Saved ${rateBasisLabel(rateBasis)} when this stage was dispatched`}
               />
             </div>
           </div>
@@ -526,10 +534,11 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                   {/* Row 7: Amount (રકમ) / Return Weight */}
                   <tr className={`border-b border-black ${isWaxSlip ? 'hidden' : ''}`}>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.amountLabel}
+                      Rate / Amount
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold font-mono border-r-2 border-b border-black text-black">
-                      {amountValue || '—'}
+                      <div>{rateText}</div>
+                      <div className="text-[10px] font-sans text-neutral-600">Total: {totalText}</div>
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
                       {t.returnWeightLabel}

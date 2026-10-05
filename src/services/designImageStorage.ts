@@ -95,6 +95,45 @@ export async function getDesignPhotoUrl(path: string): Promise<string> {
   }
 }
 
+/**
+ * Resolve many private design-image URLs in one Storage request. This prevents
+ * the dashboard from waiting on one network request per design at startup.
+ */
+export async function getDesignPhotoUrls(paths: string[]): Promise<Map<string, string>> {
+  const uniquePaths = [...new Set(paths.filter(Boolean))];
+  const urls = new Map<string, string>();
+  const missingPaths: string[] = [];
+
+  for (const path of uniquePaths) {
+    const cached = signedPhotoUrlCache.get(path);
+    if (cached && cached.expiresAt > Date.now()) {
+      urls.set(path, cached.url);
+    } else {
+      missingPaths.push(path);
+    }
+  }
+
+  if (missingPaths.length === 0) return urls;
+
+  const { data, error } = await requireSupabase()
+    .storage
+    .from(DESIGN_PHOTOS_BUCKET)
+    .createSignedUrls(missingPaths, DESIGN_PHOTO_URL_TTL_SECONDS);
+
+  if (error) throw new Error(`Could not load design images: ${error.message}`);
+
+  for (const signed of data ?? []) {
+    if (!signed.path || !signed.signedUrl) continue;
+    signedPhotoUrlCache.set(signed.path, {
+      url: signed.signedUrl,
+      expiresAt: Date.now() + SIGNED_PHOTO_CACHE_MS,
+    });
+    urls.set(signed.path, signed.signedUrl);
+  }
+
+  return urls;
+}
+
 /** Fetch an existing private design image through Supabase for legacy photo matching. */
 export async function downloadDesignPhoto(path: string): Promise<Blob> {
   const { data, error } = await requireSupabase()

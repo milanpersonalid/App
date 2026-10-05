@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lot, Stage, BranchType, NEXT_STAGE_OPTIONS } from '../types';
+import { calculateJobWorkAmount, getStageRateBasis, rateBasisLabel, rateUnitLabel } from '../utils/stagePricing';
 import { useApp } from '../context/AppContext';
 import { SearchableSelect } from './SearchableSelect';
 import { ArrowRight, Sparkles, X, ShieldAlert, Printer } from 'lucide-react';
@@ -63,7 +64,13 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
   const [selectedKarigarId, setSelectedKarigarId] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const [jobWorkAmount, setJobWorkAmount] = useState<string>('');
+  const [jobWorkRate, setJobWorkRate] = useState<string>('');
+  const selectedRateBasis = selectedOption ? getStageRateBasis(selectedOption.stage) : 'flat';
+  const lastRecord = lot.history[lot.history.length - 1];
+  const sentPieces = lastRecord?.stage === 'Wax'
+    ? (lastRecord.estimatedPieces ?? lot.initialPieces)
+    : (lastRecord?.statedPieces ?? lot.initialPieces);
+  const sentWeight = lastRecord?.weightReceived ?? lot.initialWeight;
 
   // Auto-suggest specialty karigar when stage option is chosen
   useEffect(() => {
@@ -96,9 +103,9 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
       return;
     }
 
-    const amount = parseFloat(jobWorkAmount);
-    if (!isMovingToReadyStock && (!Number.isFinite(amount) || amount < 0)) {
-      setError('Enter the job-work amount for the printed slip. Use 0 if there is no charge.');
+    const rate = parseFloat(jobWorkRate);
+    if (!isMovingToReadyStock && (!Number.isFinite(rate) || rate < 0)) {
+      setError(`Enter the job-work rate ${rateBasisLabel(selectedRateBasis)}. Use 0 if there is no charge.`);
       return;
     }
 
@@ -110,7 +117,7 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
         selectedOption.stage,
         selectedOption.branch,
         selectedKarigarId || lot.currentKarigarId,
-        isMovingToReadyStock ? 0 : Number(amount.toFixed(2))
+        isMovingToReadyStock ? 0 : Number(rate.toFixed(2))
       );
 
       if (res.success && res.lot) {
@@ -180,7 +187,7 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
                 );
                 setSelectedOption(option ?? null);
                 setSelectedKarigarId('');
-                setJobWorkAmount('');
+                setJobWorkRate('');
               }}
               searchPlaceholder="Search destinations…"
               className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-sm focus:border-amber-500 outline-none"
@@ -218,19 +225,21 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
 
               <div className="pt-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
-                  Slip Amount (₹) <span className="text-amber-400">*</span>
+                  {selectedOption?.stage} Rate ({rateUnitLabel(selectedRateBasis)}) <span className="text-amber-400">*</span>
                 </label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={jobWorkAmount}
-                  onChange={(event) => setJobWorkAmount(event.target.value)}
-                  placeholder="Job-work price printed on this slip"
+                  value={jobWorkRate}
+                  onChange={(event) => setJobWorkRate(event.target.value)}
+                  placeholder={selectedRateBasis === 'per_kg' ? 'Example: 200 per kg' : selectedRateBasis === 'per_piece' ? 'Example: 2.50 per piece' : 'Total job-work amount'}
                   className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 font-mono text-sm focus:border-amber-500 outline-none"
                 />
                 <p className="mt-1 text-[11px] text-neutral-500">
-                  This saved amount will appear on the slip and in the karigar ledger.
+                  {selectedRateBasis === 'flat'
+                    ? 'This total amount will appear on the slip and in the karigar ledger.'
+                    : `Calculated on material sent: ${selectedRateBasis === 'per_kg' ? `${(sentWeight / 1000).toFixed(3)} kg` : `${sentPieces} pieces`} × rate = ₹${calculateJobWorkAmount(Number(jobWorkRate) || 0, selectedRateBasis, sentPieces, sentWeight).toLocaleString('en-IN')}.`}
                 </p>
               </div>
             </div>

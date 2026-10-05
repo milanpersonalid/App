@@ -7,8 +7,10 @@ import {
   BranchType,
   ReadyStockItem,
   LotStageRecord,
+  JobWorkRateBasis,
   NEXT_STAGE_OPTIONS,
 } from '../types';
+import { calculateJobWorkAmount, getStageRateBasis } from '../utils/stagePricing';
 import { generateLotStageQrPayload } from '../utils/qrBarcode';
 import { extractImageFingerprint } from '../utils/photoSearch';
 import {
@@ -77,7 +79,7 @@ interface AppContextType {
     initialWeight: number;
     orderedQuantity: number;
     karigarId: string;
-    jobWorkAmount: number;
+    jobWorkRate: number;
     hasWaxReceipt: boolean;
     statedPieces: number;
     hasDiscrepancy: boolean;
@@ -117,7 +119,7 @@ interface AppContextType {
     nextStage: Stage,
     branch: BranchType,
     nextKarigarId: string,
-    jobWorkAmount: number
+    jobWorkRate: number
   ) => Promise<{ success: boolean; message: string; lot?: Lot }>;
 
   // Reports and derived queries
@@ -147,6 +149,32 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const PRODUCTION_CACHE_KEY = 'shreenathji-production-cache-v1';
+const PRODUCTION_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+type ProductionSnapshot = Pick<AppContextType, 'designs' | 'lots' | 'karigars'>;
+
+const readProductionSnapshot = (): ProductionSnapshot | null => {
+  try {
+    const raw = window.localStorage.getItem(PRODUCTION_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { savedAt?: number; data?: ProductionSnapshot };
+    if (!cached.savedAt || Date.now() - cached.savedAt > PRODUCTION_CACHE_MAX_AGE_MS) return null;
+    if (!cached.data || !Array.isArray(cached.data.designs) || !Array.isArray(cached.data.lots) || !Array.isArray(cached.data.karigars)) return null;
+    return cached.data;
+  } catch {
+    return null;
+  }
+};
+
+const saveProductionSnapshot = (data: ProductionSnapshot) => {
+  try {
+    window.localStorage.setItem(PRODUCTION_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data }));
+  } catch {
+    // Caching is only a speed enhancement. The live Supabase data remains authoritative.
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoggedIn } = useAuthAndTheme();
   const [designs, setDesigns] = useState<Design[]>([]);
@@ -169,6 +197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDesigns(data.designs);
       setLots(data.lots);
       setKarigars(data.karigars);
+      saveProductionSnapshot(data);
       setDataError(null);
     } catch (error) {
       setDataError(error instanceof Error ? error.message : 'Unable to load production data from Supabase.');
@@ -187,7 +216,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    setIsLoading(true);
+    const cachedData = readProductionSnapshot();
+    if (cachedData) {
+      setDesigns(cachedData.designs);
+      setLots(cachedData.lots);
+      setKarigars(cachedData.karigars);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
     void refreshData();
     if (!isSupabaseConfigured) return;
 
@@ -243,6 +280,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.clearInterval(signedPhotoRefreshTimer);
     };
   }, [isLoggedIn]);
+
+  // Keep the most recent successful state ready for the next app open. It is
+  // replaced by Supabase on every refresh and real-time change.
+  useEffect(() => {
+    if (!isLoggedIn || isLoading) return;
+    saveProductionSnapshot({ designs, lots, karigars });
+  }, [designs, lots, karigars, isLoggedIn, isLoading]);
 
   const createKarigar = async (data: {
     name: string;
@@ -417,7 +461,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initialWeight: number;
     orderedQuantity: number;
     karigarId: string;
-    jobWorkAmount: number;
+    jobWorkRate: number;
     hasWaxReceipt: boolean;
     statedPieces: number;
     hasDiscrepancy: boolean;
@@ -441,7 +485,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       karigarName,
       dateOrdered: now,
       orderedQuantity: lotData.orderedQuantity,
-      jobWorkAmount: lotData.jobWorkAmount,
+      jobWorkRate: lotData.jobWorkRate,
+      jobWorkRateBasis: 'per_piece',
+      jobWorkAmount: calculateJobWorkAmount(
+        lotData.jobWorkRate,
+        'per_piece',
+        lotData.hasWaxReceipt ? lotData.initialPieces : lotData.orderedQuantity,
+      ),
       qrData: dynamicQr,
       isCompleted: lotData.hasWaxReceipt,
       ...(lotData.hasWaxReceipt ? {
@@ -541,6 +591,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isCompleted: true,
         completedAt: now,
       };
+      if (completedRecord.jobWorkRate != null) {
+        completedRecord.jobWorkRateBasis ??= 'per_piece';
+        completedRecord.jobWorkAmount = calculateJobWorkAmount(
+          completedRecord.jobWorkRate,
+          completedRecord.jobWorkRateBasis,
+          estimatedPieces,
+          data.weightReceived,
+        );
+      }
       delete completedRecord.dateSent;
       delete completedRecord.weightSent;
       delete completedRecord.piecesSent;
@@ -790,7 +849,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     nextStage: Stage,
     branch: BranchType,
     nextKarigarId: string,
-    jobWorkAmount: number
+    jobWorkRate: number
   ): Promise<{ success: boolean; message: string; lot?: Lot }> => {
     const lotIndex = lots.findIndex((l) => l.id === lotId);
     if (lotIndex === -1) {
@@ -852,12 +911,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       now
     );
 
+    const jobWorkRateBasis: JobWorkRateBasis = getStageRateBasis(nextStage);
     const nextStageRecord: LotStageRecord = {
       stage: nextStage,
       karigarId: nextKarigarId,
       karigarName,
       dateSent: now,
-      jobWorkAmount,
+      jobWorkRate,
+      jobWorkRateBasis,
+      jobWorkAmount: calculateJobWorkAmount(
+        jobWorkRate,
+        jobWorkRateBasis,
+        Math.max(0, prevPieces),
+        prevWeightReceived,
+      ),
       weightSent: prevWeightReceived,
       piecesSent: Math.max(0, prevPieces),
       qrData: newDynamicQr,

@@ -11,6 +11,8 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { SearchableSelect } from '../SearchableSelect';
+import { JobWorkRateBasis } from '../../types';
+import { formatJobWorkRate, getStageRateBasis, rateBasisLabel } from '../../utils/stagePricing';
 
 type LedgerRow = {
   id: string;
@@ -26,6 +28,8 @@ type LedgerRow = {
   receivedPieces?: number;
   receivedWeight?: number;
   orderedQuantity?: number;
+  rate?: number;
+  rateBasis?: JobWorkRateBasis;
   amount?: number;
   isCompleted: boolean;
 };
@@ -78,6 +82,8 @@ export const KarigarLedgerView: React.FC = () => {
       receivedPieces: record.statedPieces ?? record.estimatedPieces,
       receivedWeight: record.weightReceived,
       orderedQuantity: record.orderedQuantity,
+      rate: record.jobWorkRate,
+      rateBasis: record.jobWorkRateBasis ?? (record.jobWorkRate == null ? undefined : getStageRateBasis(record.stage)),
       amount: record.jobWorkAmount,
       isCompleted: record.isCompleted,
     }))
@@ -114,7 +120,7 @@ export const KarigarLedgerView: React.FC = () => {
     const headers = [
       'Sent Date', 'Received Date', 'Karigar', 'Lot Number', 'Design', 'Stage', 'Ordered Quantity',
       'Pieces Sent', 'Weight Sent (g)', 'Pieces Received', 'Weight Received (g)',
-      'Status', 'Slip Amount (INR)',
+      'Rate Basis', 'Rate (INR)', 'Status', 'Calculated Amount (INR)',
     ];
     const lines = [
       headers.map(csvCell).join(','),
@@ -130,6 +136,8 @@ export const KarigarLedgerView: React.FC = () => {
         row.sentWeight,
         row.receivedPieces,
         row.receivedWeight,
+        row.rateBasis ? rateBasisLabel(row.rateBasis) : '',
+        row.rate,
         row.isCompleted ? 'Received' : 'Pending',
         row.amount,
       ].map(csvCell).join(',')),
@@ -241,7 +249,7 @@ export const KarigarLedgerView: React.FC = () => {
         {[
           { label: 'Sent', value: `${formatNumber(totals.sentPieces, 0)} pcs`, detail: `${formatNumber(totals.sentWeight)} g`, icon: ArrowUpFromLine, color: 'text-blue-500' },
           { label: 'Received', value: `${formatNumber(totals.receivedPieces, 0)} pcs`, detail: `${formatNumber(totals.receivedWeight)} g`, icon: ArrowDownToLine, color: 'text-emerald-500' },
-          { label: 'Slip Amount', value: formatCurrency(totals.amount), detail: `${rows.length} entries`, icon: IndianRupee, color: 'text-amber-500' },
+          { label: 'Job-work Total', value: formatCurrency(totals.amount), detail: `${rows.length} entries`, icon: IndianRupee, color: 'text-amber-500' },
           { label: 'Pending Return', value: String(totals.pending), detail: 'active job slips', icon: Scale, color: 'text-rose-500' },
         ].map((card) => {
           const Icon = card.icon;
@@ -271,7 +279,10 @@ export const KarigarLedgerView: React.FC = () => {
               </div>
               <div className="text-right shrink-0">
                 <div className="font-mono font-bold text-sm text-amber-500">
-                  {row.amount == null ? 'Amount —' : formatCurrency(row.amount)}
+                  {row.amount == null ? 'Total —' : formatCurrency(row.amount)}
+                </div>
+                <div className={`mt-0.5 text-[10px] font-mono ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
+                  {row.rate == null ? 'Rate —' : formatJobWorkRate(row.rate, row.rateBasis)}
                 </div>
                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${row.isCompleted ? 'bg-emerald-500/15 text-emerald-500' : 'bg-rose-500/15 text-rose-500'}`}>
                   {row.isCompleted ? 'RECEIVED' : 'PENDING'}

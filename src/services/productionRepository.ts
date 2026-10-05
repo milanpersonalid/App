@@ -1,6 +1,6 @@
 import { Design, Karigar, Lot, LotStageRecord } from '../types';
 import { requireSupabase } from '../lib/supabase';
-import { getDesignPhotoUrl } from './designImageStorage';
+import { getDesignPhotoUrl, getDesignPhotoUrls } from './designImageStorage';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -11,7 +11,7 @@ export type ProductionChange = {
   oldRow: any;
 };
 
-export const designFromRow = async (row: any): Promise<Design> => {
+export const designFromRow = async (row: any, resolvedPhotoUrl?: string): Promise<Design> => {
   const storedPhoto = String(row.photo_url ?? '');
   const isStoragePath = storedPhoto.length > 0 &&
     !storedPhoto.startsWith('data:') &&
@@ -22,7 +22,7 @@ export const designFromRow = async (row: any): Promise<Design> => {
     id: row.id,
     name: row.name,
     orderRef: row.order_ref,
-    photoUrl: photoStoragePath ? await getDesignPhotoUrl(photoStoragePath) : storedPhoto,
+    photoUrl: photoStoragePath ? (resolvedPhotoUrl ?? await getDesignPhotoUrl(photoStoragePath)) : storedPhoto,
     photoStoragePath,
     targetQuantity: row.target_quantity ?? undefined,
     lowStockThreshold: row.low_stock_threshold,
@@ -157,8 +157,14 @@ export async function fetchProductionData() {
   throwIfError(lotResult.error);
   throwIfError(karigarResult.error);
 
+  const designRows = designResult.data ?? [];
+  const storagePaths = designRows
+    .map((row) => String(row.photo_url ?? ''))
+    .filter((path) => path && !path.startsWith('data:') && !/^https?:\/\//i.test(path));
+  const photoUrls = await getDesignPhotoUrls(storagePaths);
+
   return {
-    designs: await Promise.all((designResult.data ?? []).map(designFromRow)),
+    designs: await Promise.all(designRows.map((row) => designFromRow(row, photoUrls.get(String(row.photo_url ?? ''))))),
     lots: (lotResult.data ?? []).map(lotFromRow),
     karigars: (karigarResult.data ?? []).map(karigarFromRow),
   };

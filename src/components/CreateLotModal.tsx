@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import { SearchableSelect } from './SearchableSelect';
 import { Lot, Stage } from '../types';
+import { calculateJobWorkAmount, rateUnitLabel } from '../utils/stagePricing';
 import {
   X,
   Layers,
@@ -45,7 +46,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
   const startingStage: Stage = 'Wax';
   const [statedPieces, setStatedPieces] = useState<string>('');
   const [karigarId, setKarigarId] = useState<string>('');
-  const [jobWorkAmount, setJobWorkAmount] = useState<string>('');
+  const [jobWorkRate, setJobWorkRate] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -114,9 +115,9 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
       return;
     }
 
-    const amount = parseFloat(jobWorkAmount);
-    if (!Number.isFinite(amount) || amount < 0) {
-      setError('Enter the job-work amount shown on the Wax slip. Use 0 if there is no charge.');
+    const rate = parseFloat(jobWorkRate);
+    if (!Number.isFinite(rate) || rate < 0) {
+      setError('Enter the Wax job-work rate per piece. Use 0 if there is no charge.');
       return;
     }
 
@@ -159,7 +160,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
         initialWeight: weight,
         orderedQuantity: orderedPieceCount,
         karigarId,
-        jobWorkAmount: Number(amount.toFixed(2)),
+        jobWorkRate: Number(rate.toFixed(2)),
         hasWaxReceipt,
         statedPieces: statedPieceCount,
         hasDiscrepancy,
@@ -500,17 +501,22 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
 
             <div>
               <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
-                Slip Amount (₹) <span className="text-amber-500">*</span>
+                Wax Rate ({rateUnitLabel('per_piece')}) <span className="text-amber-500">*</span>
               </label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                value={jobWorkAmount}
-                onChange={(event) => setJobWorkAmount(event.target.value)}
-                placeholder="Job-work price shown on the slip"
+                value={jobWorkRate}
+                onChange={(event) => setJobWorkRate(event.target.value)}
+                placeholder="Example: 2.50 per piece"
                 className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${isBright ? 'bg-white border-[#CBD5E1] text-[#0F172A] focus:border-amber-600' : 'bg-neutral-900 border-neutral-700 text-neutral-100 focus:border-amber-500'}`}
               />
+              <p className={`mt-1 text-[11px] ${isBright ? 'text-[#64748B]' : 'text-neutral-500'}`}>
+                {hasWaxReceipt
+                  ? `Estimated total: ₹${calculateJobWorkAmount(Number(jobWorkRate) || 0, 'per_piece', initialPieces).toLocaleString('en-IN')}`
+                  : `Expected total on ${orderedPieceCount || 0} ordered pieces: ₹${calculateJobWorkAmount(Number(jobWorkRate) || 0, 'per_piece', orderedPieceCount).toLocaleString('en-IN')}. It will update from the actual Wax receipt.`}
+              </p>
             </div>
 
             {selectedKarigar && (

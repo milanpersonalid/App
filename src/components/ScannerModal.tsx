@@ -461,7 +461,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
             }`}
           >
             <Search className="w-4 h-4" />
-            <span className="font-bold text-[11px]">2. Look Up</span>
+            <span className="font-bold text-[11px]">2. Check Design</span>
           </button>
 
           <button

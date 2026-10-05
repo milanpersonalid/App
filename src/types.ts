@@ -44,6 +44,9 @@ export type BranchType = 'none' | 'plain' | 'gold';
 
 export type CalibrationTarget = 'wax' | 'metal';
 
+/** How a karigar's job-work rate is charged for a particular stage. */
+export type JobWorkRateBasis = 'per_piece' | 'per_kg' | 'flat';
+
 export type LotStatus =
   | 'awaiting_wax_receipt'  // Wax ordered from karigar, not yet received/weighed
   | 'in_progress'              // Step 1-4: Sent to karigar, work in progress
@@ -93,7 +96,11 @@ export interface LotStageRecord {
   piecesSent?: number;      // absent for the receive-only Wax record
   /** Quantity requested from the Wax karigar; only used by the receive-only Wax record. */
   orderedQuantity?: number;
-  /** Agreed job-work amount printed on this stage slip, in Indian rupees. */
+  /** The rate agreed with the karigar, e.g. ₹2/pc or ₹200/kg. */
+  jobWorkRate?: number;
+  /** Unit used for the agreed job-work rate. Older slips without this are flat amounts. */
+  jobWorkRateBasis?: JobWorkRateBasis;
+  /** Calculated total job-work amount printed on this stage slip, in Indian rupees. */
   jobWorkAmount?: number;
   qrData: string;           // Dynamic QR generated for this stage transition
   
