@@ -2,6 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import { Design, Lot } from '../types';
+import { Capacitor, PluginListenerHandle } from '@capacitor/core';
+import {
+  BarcodeFormat,
+  BarcodeScanner,
+  GoogleBarcodeScannerModuleInstallState,
+} from '@capacitor-mlkit/barcode-scanning';
+import { Camera as NativeCamera, CameraDirection } from '@capacitor/camera';
 import {
   Camera,
   Search,
@@ -16,7 +23,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { extractImageFingerprint, findTop3Matches, SimilarityResult } from '../utils/photoSearch';
-import { getStageAvgWeight, getStageWeightLabel } from '../utils/stageWeights';
+import { getStageWeightKey, getStageWeightLabel } from '../utils/stageWeights';
 
 type ScannerMode = 'confirm_arrival' | 'look_up' | 'photo_search';
 
@@ -42,7 +49,12 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCamera, setHasCamera] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string>('');
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [isTakingPhoto, setIsTakingPhoto] = useState<boolean>(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanListenerRef = useRef<PluginListenerHandle | null>(null);
+  const scanHandledRef = useRef<boolean>(false);
+  const isNative = Capacitor.isNativePlatform();
 
   // Text / manual scan simulator input
   const [manualCodeInput, setManualCodeInput] = useState<string>('');
@@ -67,9 +79,11 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState<boolean>(false);
   const [confirmedMatch, setConfirmedMatch] = useState<Design | null>(null);
 
-  // Initialize camera
+  // Native Android uses Capacitor camera/scanner plugins. A live browser
+  // camera is needed only for the web Photo Search preview.
   useEffect(() => {
     let active = true;
+    if (isNative || mode !== 'photo_search') return;
 
     async function startCamera() {
       try {
@@ -104,14 +118,20 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
       active = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (scanListenerRef.current) {
+        void scanListenerRef.current.remove();
+        scanListenerRef.current = null;
+        void BarcodeScanner.stopScan();
       }
     };
-  }, []);
+  }, [isNative, mode]);
 
   // Handle Mode 1: Confirm Arrival execution
-  const handleConfirmArrival = (code: string) => {
+  const handleConfirmArrival = async (code: string) => {
     if (!code.trim()) return;
-    const res = confirmArrival(code.trim());
+    const res = await confirmArrival(code.trim());
     setArrivalResult(res);
     setManualCodeInput('');
   };
@@ -119,6 +139,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
   // Handle Mode 2: Look Up execution
   const handleLookup = (code: string) => {
     const query = code.trim().toUpperCase();
+    const normalizedQuery = query.replace(/[^A-Z0-9]/g, '');
     if (!query) return;
 
     setLookupError('');
@@ -126,7 +147,11 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
 
     // Check exact match design barcode or ID
     const foundDesign = designs.find(
-      (d) => d.barcode.toUpperCase() === query || d.id.toUpperCase() === query
+      (d) =>
+        d.barcode.toUpperCase() === query ||
+        d.id.toUpperCase() === query ||
+        d.barcode.toUpperCase().replace(/[^A-Z0-9]/g, '') === normalizedQuery ||
+        d.id.toUpperCase().replace(/[^A-Z0-9]/g, '') === normalizedQuery
     );
     if (foundDesign) {
       setLookupResult({ type: 'design', item: foundDesign });
@@ -135,7 +160,11 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
 
     // Check exact match lot number or ID
     const foundLot = lots.find(
-      (l) => l.lotNumber.toUpperCase() === query || l.id.toUpperCase() === query
+      (l) =>
+        l.lotNumber.toUpperCase() === query ||
+        l.id.toUpperCase() === query ||
+        l.lotNumber.toUpperCase().replace(/[^A-Z0-9]/g, '') === normalizedQuery ||
+        l.id.toUpperCase().replace(/[^A-Z0-9]/g, '') === normalizedQuery
     );
     if (foundLot) {
       setLookupResult({ type: 'lot', item: foundLot });
@@ -145,23 +174,175 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
     setLookupError(`No design with barcode "${query}" or lot with number "${query}" found.`);
   };
 
+  const handleScannedCode = async (code: string) => {
+    const value = code.trim();
+    if (!value) return;
+    setManualCodeInput(value);
+    if (mode === 'confirm_arrival') await handleConfirmArrival(value);
+    else if (mode === 'look_up') handleLookup(value);
+  };
+
+  const ensureGoogleScannerModule = async () => {
+    const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+    if (available) return;
+
+    setCameraError('Preparing the barcode scanner for first use…');
+    await new Promise<void>((resolve, reject) => {
+      let listener: PluginListenerHandle | undefined;
+      let settled = false;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        void listener?.remove();
+        if (error) reject(error);
+        else resolve();
+      };
+
+      void BarcodeScanner.addListener('googleBarcodeScannerModuleInstallProgress', (event) => {
+        if (event.progress !== undefined) {
+          setCameraError(`Preparing the barcode scanner… ${Math.round(event.progress)}%`);
+        }
+        if (event.state === GoogleBarcodeScannerModuleInstallState.COMPLETED) finish();
+        if (
+          event.state === GoogleBarcodeScannerModuleInstallState.FAILED ||
+          event.state === GoogleBarcodeScannerModuleInstallState.CANCELED
+        ) {
+          finish(new Error('Scanner setup did not finish. Check your internet connection and try again.'));
+        }
+      }).then((registeredListener) => {
+        listener = registeredListener;
+        return BarcodeScanner.installGoogleBarcodeScannerModule();
+      }).catch((error: unknown) => {
+        finish(error instanceof Error ? error : new Error('Unable to prepare the barcode scanner.'));
+      });
+    });
+
+    const installed = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+    if (!installed.available) throw new Error('Scanner setup is incomplete. Please try again.');
+  };
+
+  const startBarcodeScan = async () => {
+    setCameraError('');
+    setIsScanning(true);
+    scanHandledRef.current = false;
+
+    try {
+      if (isNative) {
+        await ensureGoogleScannerModule();
+        setCameraError('');
+        const { barcodes } = await BarcodeScanner.scan({
+          formats: [
+            BarcodeFormat.QrCode,
+            BarcodeFormat.Code128,
+            BarcodeFormat.Code39,
+            BarcodeFormat.Code93,
+            BarcodeFormat.Ean13,
+            BarcodeFormat.Ean8,
+            BarcodeFormat.DataMatrix,
+            BarcodeFormat.Pdf417,
+            BarcodeFormat.Aztec,
+          ],
+          autoZoom: true,
+        });
+        const value = barcodes.find((barcode) => barcode.rawValue || barcode.displayValue);
+        if (value) await handleScannedCode(value.rawValue || value.displayValue);
+        else setCameraError('No code was read. Try again or enter it below.');
+        return;
+      }
+
+      const { supported } = await BarcodeScanner.isSupported();
+      if (!supported || !videoRef.current) {
+        setCameraError('Live scanning is not supported in this browser. Enter the code below instead.');
+        setIsScanning(false);
+        return;
+      }
+      scanListenerRef.current = await BarcodeScanner.addListener('barcodesScanned', async ({ barcodes }) => {
+        if (scanHandledRef.current) return;
+        const value = barcodes.find((barcode) => barcode.rawValue || barcode.displayValue);
+        if (!value) return;
+        scanHandledRef.current = true;
+        await BarcodeScanner.stopScan();
+        await scanListenerRef.current?.remove();
+        scanListenerRef.current = null;
+        setHasCamera(false);
+        setIsScanning(false);
+        await handleScannedCode(value.rawValue || value.displayValue);
+      });
+      await BarcodeScanner.startScan({
+        videoElement: videoRef.current,
+        formats: [
+          BarcodeFormat.QrCode,
+          BarcodeFormat.Code128,
+          BarcodeFormat.Code39,
+          BarcodeFormat.Code93,
+          BarcodeFormat.Ean13,
+          BarcodeFormat.Ean8,
+          BarcodeFormat.DataMatrix,
+          BarcodeFormat.Pdf417,
+          BarcodeFormat.Aztec,
+        ],
+      });
+      setHasCamera(true);
+    } catch (error) {
+      console.warn('Barcode scan failed:', error);
+      setCameraError(error instanceof Error ? error.message : 'Unable to open the scanner.');
+      await scanListenerRef.current?.remove();
+      scanListenerRef.current = null;
+    } finally {
+      if (isNative || scanHandledRef.current) setIsScanning(false);
+    }
+  };
+
   // Handle Mode 3: Photo Search execution
   const analyzePhoto = async (imageSrc: string) => {
     setIsAnalyzingPhoto(true);
     setConfirmedMatch(null);
+    setCameraError('');
     try {
       const fp = await extractImageFingerprint(imageSrc);
-      const matches = findTop3Matches(fp, designs);
+      if (!fp.perceptualHash || fp.hash === 'unavailable') {
+        throw new Error('The selected photo could not be analyzed. Try another image.');
+      }
+      const matches = await findTop3Matches(fp, designs);
       setPhotoSearchResults(matches);
+      if (designs.length > 0 && matches.length === 0) {
+        setCameraError('Could not read the saved design photos from Supabase. Check the connection and try again.');
+      }
     } catch (err) {
       console.error('Photo search failed:', err);
+      setCameraError(err instanceof Error ? err.message : 'Could not analyze this photo. Try another image.');
     } finally {
       setIsAnalyzingPhoto(false);
     }
   };
 
   // Capture snapshot from video feed
-  const captureSnapshot = () => {
+  const captureSnapshot = async () => {
+    if (isNative) {
+      setIsTakingPhoto(true);
+      setCameraError('');
+      try {
+        const photo = await NativeCamera.takePhoto({
+          quality: 85,
+          cameraDirection: CameraDirection.Rear,
+          targetWidth: 1280,
+          targetHeight: 960,
+        });
+        const imageSrc = photo.thumbnail
+          ? `data:image/jpeg;base64,${photo.thumbnail}`
+          : photo.webPath;
+        if (!imageSrc) throw new Error('The camera did not return a usable image.');
+        setPhotoSearchImage(imageSrc);
+        await analyzePhoto(imageSrc);
+      } catch (error) {
+        console.warn('Photo capture failed:', error);
+        setCameraError(error instanceof Error ? error.message : 'Unable to take a photo.');
+      } finally {
+        setIsTakingPhoto(false);
+      }
+      return;
+    }
+
     if (!videoRef.current) return;
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth || 400;
@@ -368,18 +549,23 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
               isBright ? 'bg-slate-900 border-slate-300' : 'bg-neutral-950 border-neutral-800'
             }`}
           >
-            {hasCamera ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-            ) : (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={hasCamera ? 'absolute inset-0 w-full h-full object-cover' : 'hidden'}
+            />
+            {!hasCamera && (
               <div className="text-center p-4">
                 <Camera className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
-                <p className="text-xs text-neutral-400 max-w-xs">{cameraError || 'Camera inactive'}</p>
+                <p className="text-xs text-neutral-400 max-w-xs">
+                  {cameraError || (isNative
+                    ? mode === 'photo_search'
+                      ? 'Tap Take Photo to open the device camera.'
+                      : 'Tap Scan QR / Barcode to open the scanner.'
+                    : 'Camera inactive')}
+                </p>
               </div>
             )}
 
@@ -401,10 +587,10 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
               <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
                 <button
                   onClick={captureSnapshot}
-                  disabled={!hasCamera}
+                  disabled={isNative ? isTakingPhoto : !hasCamera}
                   className="px-4 py-2 rounded-full bg-blue-500 hover:bg-blue-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition disabled:opacity-50"
                 >
-                  <Camera className="w-4 h-4" /> Snap Photo
+                  <Camera className="w-4 h-4" /> {isTakingPhoto ? 'Opening Camera…' : isNative ? 'Take Photo' : 'Snap Photo'}
                 </button>
                 <label className="px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-100 font-bold text-xs flex items-center gap-1.5 shadow-lg cursor-pointer active:scale-95 transition">
                   <Upload className="w-4 h-4" /> Upload Image
@@ -417,6 +603,19 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
           {/* Quick active lots or barcode simulator for easy instant testing */}
           {(mode === 'confirm_arrival' || mode === 'look_up') && (
             <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => void startBarcodeScan()}
+                disabled={isScanning}
+                className={`w-full py-2.5 rounded-xl border font-semibold text-xs flex items-center justify-center gap-2 transition disabled:opacity-60 ${
+                  isBright
+                    ? 'bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-950'
+                    : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-200'
+                }`}
+              >
+                <QrCode className="w-4 h-4" />
+                {isScanning ? (cameraError || 'Opening scanner…') : 'Scan QR / Barcode'}
+              </button>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -614,16 +813,6 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                               }`}>
                                 Metal: {d.metalAvgWeightPerPiece}g
                               </span>
-                              <span className={`px-1.5 py-0.5 rounded border ${
-                                isBright ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                              }`}>
-                                Plain: {d.plainAvgWeightPerPiece}g
-                              </span>
-                              <span className={`px-1.5 py-0.5 rounded border ${
-                                isBright ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                              }`}>
-                                Gold: {d.goldAvgWeightPerPiece}g
-                              </span>
                             </div>
                             {onSelectDesign && (
                               <button
@@ -644,7 +833,9 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                     (() => {
                       const l = lookupResult.item as Lot;
                       const design = designs.find((d) => d.id === l.designId);
-                      const stageAvgWeight = getStageAvgWeight(design, l.currentStage, l.branch);
+                      const stageAvgWeight = design
+                        ? Number(design[getStageWeightKey(l.currentStage, l.branch)]) || 0
+                        : 0;
                       const stageWeightLabel = getStageWeightLabel(l.currentStage, l.branch);
 
                       return (
@@ -677,7 +868,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                                   : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                               }`}
                             >
-                              {(stageAvgWeight || 1.5).toFixed(3)} g/pc
+                              {stageAvgWeight > 0 ? `${stageAvgWeight.toFixed(3)} g/pc` : 'Not calibrated'}
                             </span>
                           </div>
                           {onSelectLot && (
@@ -700,7 +891,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
             </>
           )}
 
-          {/* MODE 3: PHOTO SEARCH TOP 3 RANKED MATCHES */}
+              {/* MODE 3: PHOTO SEARCH TOP 3 RANKED MATCHES */}
           {mode === 'photo_search' && (
             <div className="space-y-3 pt-1">
               {isAnalyzingPhoto && (
@@ -720,12 +911,20 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className={`font-bold uppercase tracking-wider ${isBright ? 'text-slate-900' : 'text-neutral-200'}`}>
-                      Top 3 Similarity Matches
+                      Closest Design Candidates
                     </span>
                     <span className={`text-[11px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
                       Ranked by similarity %
                     </span>
                   </div>
+
+                  {photoSearchResults[0].similarity < 62 && (
+                    <div className={`rounded-lg px-3 py-2 text-[11px] ${
+                      isBright ? 'bg-amber-50 text-amber-900' : 'bg-amber-500/10 text-amber-200'
+                    }`}>
+                      These are the closest available images, but the visual match is weak. Compare them manually; this score is not an identification.
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     {photoSearchResults.map(({ design, similarity }, index) => {
@@ -774,7 +973,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                             {/* Similarity Score bar */}
                             <div className="text-right">
                               <div className={`text-xs font-bold font-mono ${isBright ? 'text-blue-700' : 'text-blue-400'}`}>
-                                {similarity}% Match
+                                {similarity}% Similar
                               </div>
                               <div className={`w-16 h-1.5 rounded-full overflow-hidden mt-1 ${isBright ? 'bg-slate-200' : 'bg-neutral-800'}`}>
                                 <div
@@ -838,6 +1037,20 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {photoSearchImage && photoSearchResults.length === 0 && !isAnalyzingPhoto && (
+                <div
+                  className={`rounded-xl border p-4 text-xs ${
+                    isBright
+                      ? 'border-amber-200 bg-amber-50 text-amber-900'
+                      : 'border-amber-500/20 bg-amber-500/10 text-amber-200'
+                  }`}
+                >
+                  {designs.length === 0
+                    ? 'There are no saved designs to compare against yet.'
+                    : cameraError || 'No saved design photos could be compared. Check the connection and try again.'}
                 </div>
               )}
             </div>

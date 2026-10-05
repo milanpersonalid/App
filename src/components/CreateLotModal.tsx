@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
-import { Stage } from '../types';
+import { SearchableSelect } from './SearchableSelect';
+import { Lot, Stage } from '../types';
 import {
   X,
   Layers,
@@ -17,7 +18,7 @@ import {
 
 interface CreateLotModalProps {
   onClose: () => void;
-  onSuccess: (lotNumber: string) => void;
+  onSuccess: (lot: Lot) => void;
   preselectedDesignId?: string;
 }
 
@@ -26,7 +27,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
   onSuccess,
   preselectedDesignId,
 }) => {
-  const { designs, karigars, createLot, lots } = useApp();
+  const { designs, karigars, createLot, lots, recalibrateDesign } = useApp();
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
@@ -37,27 +38,45 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
   const [designId, setDesignId] = useState<string>(
     preselectedDesignId || designs[0]?.id || ''
   );
-  const [initialPieces, setInitialPieces] = useState<string>('200');
-  const [initialWeight, setInitialWeight] = useState<string>('300.0');
-  const [startingStage, setStartingStage] = useState<Stage>('Wax');
+  const [initialWeight, setInitialWeight] = useState<string>('');
+  const [orderedQuantity, setOrderedQuantity] = useState<string>('');
+  const [samplePieces, setSamplePieces] = useState<string>('200');
+  const [sampleWeight, setSampleWeight] = useState<string>('');
+  const startingStage: Stage = 'Wax';
+  const [statedPieces, setStatedPieces] = useState<string>('');
   const [karigarId, setKarigarId] = useState<string>('');
+  const [jobWorkAmount, setJobWorkAmount] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const [isWeightManuallyEdited, setIsWeightManuallyEdited] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedDesign = designs.find((d) => d.id === designId);
   const selectedKarigar = karigars.find((k) => k.id === karigarId);
+  const existingRuler = selectedDesign ? Number(selectedDesign.waxAvgWeightPerPiece) || 0 : 0;
+  const samplePieceCount = parseInt(samplePieces, 10) || 0;
+  const sampleWeightGrams = parseFloat(sampleWeight) || 0;
+  const sampleRuler = samplePieceCount > 0 && sampleWeightGrams > 0
+    ? sampleWeightGrams / samplePieceCount
+    : 0;
+  const activeRuler = existingRuler > 0 ? existingRuler : sampleRuler;
+  const hasWaxReceipt = initialWeight.trim().length > 0;
+  const initialWeightGrams = parseFloat(initialWeight) || 0;
+  const initialPieces = initialWeightGrams > 0 && activeRuler > 0
+    ? Math.round(initialWeightGrams / activeRuler)
+    : 0;
+  const needsCalibration = Boolean(selectedDesign) && existingRuler <= 0;
+  const statedPieceCount = parseInt(statedPieces, 10) || 0;
+  const orderedPieceCount = parseInt(orderedQuantity, 10) || 0;
+  const orderedDifference = orderedPieceCount - initialPieces;
+  const discrepancyGrams = activeRuler > 0 && statedPieceCount > 0
+    ? Math.abs(initialWeightGrams - statedPieceCount * activeRuler)
+    : 0;
+  const hasDiscrepancy = activeRuler > 0 && statedPieceCount > 0 &&
+    (discrepancyGrams > 2 || Math.abs(initialPieces - statedPieceCount) > Math.max(3, initialPieces * 0.03));
 
-  // Auto-fill estimated weight based on pieces * wax avg weight (since new lots always start at Wax)
   useEffect(() => {
-    if (selectedDesign && initialPieces && !isWeightManuallyEdited) {
-      const p = parseInt(initialPieces, 10);
-      if (p > 0) {
-        const waxPerPiece = selectedDesign.waxAvgWeightPerPiece ?? 0.22;
-        const estWeight = Number((p * waxPerPiece).toFixed(2));
-        setInitialWeight(estWeight.toString());
-      }
-    }
-  }, [designId, initialPieces, selectedDesign, isWeightManuallyEdited]);
+    setSamplePieces('200');
+    setSampleWeight('');
+  }, [designId]);
 
   // Set default karigar specializing in starting stage
   useEffect(() => {
@@ -67,33 +86,9 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
     if (candidate) {
       setKarigarId(candidate.id);
     }
-  }, [startingStage, karigars]);
+  }, [karigars]);
 
-  const handleResetWeightToBaseline = () => {
-    if (selectedDesign && initialPieces) {
-      const p = parseInt(initialPieces, 10);
-      if (p > 0) {
-        const waxPerPiece = selectedDesign.waxAvgWeightPerPiece ?? 0.22;
-        const estWeight = Number((p * waxPerPiece).toFixed(2));
-        setInitialWeight(estWeight.toString());
-        setIsWeightManuallyEdited(false);
-      }
-    }
-  };
-
-  const handlePiecesQuickSelect = (piecesToAddOrSet: number, isDirectSet = false) => {
-    const current = parseInt(initialPieces, 10) || 0;
-    const newPieces = isDirectSet ? piecesToAddOrSet : Math.max(1, current + piecesToAddOrSet);
-    setInitialPieces(newPieces.toString());
-    if (selectedDesign) {
-      const waxPerPiece = selectedDesign.waxAvgWeightPerPiece ?? 0.22;
-      const estWeight = Number((newPieces * waxPerPiece).toFixed(2));
-      setInitialWeight(estWeight.toString());
-      setIsWeightManuallyEdited(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -114,35 +109,69 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
       setError('Please assign a starting Karigar.');
       return;
     }
-
-    const pieces = parseInt(initialPieces, 10);
-    const weight = parseFloat(initialWeight);
-
-    if (isNaN(pieces) || pieces <= 0) {
-      setError('Initial pieces count must be a positive integer.');
-      return;
-    }
-    if (isNaN(weight) || weight <= 0) {
-      setError('Initial weight must be a positive number greater than 0.');
+    if (orderedPieceCount <= 0) {
+      setError('Enter the quantity originally ordered from the Wax karigar.');
       return;
     }
 
-    const newLot = createLot({
-      lotNumber: trimmedLotNumber,
-      designId,
-      initialPieces: pieces,
-      initialWeight: weight,
-      startingStage,
-      karigarId,
-    });
+    const amount = parseFloat(jobWorkAmount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError('Enter the job-work amount shown on the Wax slip. Use 0 if there is no charge.');
+      return;
+    }
 
-    onSuccess(newLot.lotNumber);
+    const weight = hasWaxReceipt ? parseFloat(initialWeight) : 0;
+
+    if (hasWaxReceipt && (!Number.isFinite(weight) || weight <= 0)) {
+      setError('Wax received weight must be a positive number greater than 0.');
+      return;
+    }
+    if (!hasWaxReceipt && statedPieces.trim()) {
+      setError('Enter the received weight before entering the karigar’s stated pieces, or leave both blank to save an outstanding Wax order.');
+      return;
+    }
+    if (hasWaxReceipt && needsCalibration && (!samplePieceCount || !sampleWeightGrams || sampleRuler <= 0)) {
+      setError('This design has no Wax ruler yet. Enter the weight and piece count of a small representative sample to calibrate it.');
+      return;
+    }
+    if (hasWaxReceipt && initialPieces <= 0) {
+      setError('The initial piece estimate could not be calculated. Check the total weight and stage ruler/sample.');
+      return;
+    }
+    if (hasWaxReceipt && statedPieceCount <= 0) {
+      setError('Enter the piece count stated by the Wax karigar on the slip.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (hasWaxReceipt && needsCalibration && selectedDesign) {
+        await recalibrateDesign(
+          selectedDesign.id,
+          'wax',
+          sampleRuler
+        );
+      }
+      const newLot = await createLot({
+        lotNumber: trimmedLotNumber,
+        designId,
+        initialPieces,
+        initialWeight: weight,
+        orderedQuantity: orderedPieceCount,
+        karigarId,
+        jobWorkAmount: Number(amount.toFixed(2)),
+        hasWaxReceipt,
+        statedPieces: statedPieceCount,
+        hasDiscrepancy,
+        discrepancyGramsDiff: Number(discrepancyGrams.toFixed(2)),
+      });
+      onSuccess(newLot);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create lot in Supabase.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const computedEffectiveAvgWeight =
-    parseInt(initialPieces, 10) > 0 && parseFloat(initialWeight) > 0
-      ? (parseFloat(initialWeight) / parseInt(initialPieces, 10)).toFixed(3)
-      : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print">
@@ -209,8 +238,8 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
             </div>
           )}
 
-          {/* Section 1: Lot Identity & Stage */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Section 1: Lot Identity — production always starts at Wax */}
+          <div className="grid grid-cols-1 gap-4">
             {/* Lot Number */}
             <div>
               <label
@@ -223,7 +252,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
               <div className="relative flex items-center">
                 <input
                   type="text"
-                  required
                   value={lotNumber}
                   onChange={(e) => setLotNumber(e.target.value.toUpperCase())}
                   placeholder="e.g. LOT-4821"
@@ -248,32 +276,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
               </div>
             </div>
 
-            {/* Starting Stage */}
-            <div>
-              <label
-                className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
-                  isBright ? 'text-[#3F3F46]' : 'text-neutral-300'
-                }`}
-              >
-                Starting Stage <span className="text-amber-500">*</span>
-              </label>
-              <select
-                value={startingStage}
-                onChange={(e) => setStartingStage(e.target.value as Stage)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none transition ${
-                  isBright
-                    ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-500/30'
-                    : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
-                }`}
-              >
-                <option value="Wax">Wax (Default Stage 1)</option>
-                <option value="Casting">Casting (Stage 2)</option>
-                <option value="Buff">Buff (Stage 3)</option>
-                <option value="Zabora">Zabora (Stage 4)</option>
-                <option value="Dull">Dull (Stage 5)</option>
-                <option value="Chhol">Chhol (Stage 6)</option>
-              </select>
-            </div>
           </div>
 
           {/* Section 2: Ring Design & Baseline Card */}
@@ -294,24 +296,18 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
               </label>
             </div>
 
-            <select
+            <SearchableSelect
               value={designId}
-              onChange={(e) => {
-                setDesignId(e.target.value);
-                setIsWeightManuallyEdited(false);
-              }}
+              onChange={setDesignId}
+              bright={isBright}
+              searchPlaceholder="Search designs by name or barcode…"
               className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none transition ${
                 isBright
                   ? 'bg-white border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:ring-1 focus:ring-amber-500/30'
                   : 'bg-neutral-900 border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
               }`}
-            >
-              {designs.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.barcode}) &bull; Wax: {d.waxAvgWeightPerPiece}g/pc
-                </option>
-              ))}
-            </select>
+              options={designs.map((d) => ({ value: d.id, label: `${d.name} (${d.barcode})` }))}
+            />
 
             {/* Design Details Card */}
             {selectedDesign && (
@@ -350,14 +346,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                   </div>
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs">
                     <span
-                      className={`flex items-center gap-1 font-semibold ${
-                        isBright ? 'text-amber-800' : 'text-amber-400'
-                      }`}
-                    >
-                      <Scale className="w-3.5 h-3.5" />
-                      Wax Baseline: {selectedDesign.waxAvgWeightPerPiece} g/pc
-                    </span>
-                    <span
                       className={`text-[11px] ${
                         isBright ? 'text-[#64748B]' : 'text-neutral-400'
                       }`}
@@ -370,126 +358,97 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
             )}
           </div>
 
-          {/* Section 3: Quantity & Weight Matrix */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Initial Pieces */}
+          {/* Section 3: Total batch weight and ruler-based piece estimate */}
+          <div className="space-y-4">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label
-                  className={`text-xs font-semibold uppercase tracking-wider ${
-                    isBright ? 'text-[#3F3F46]' : 'text-neutral-300'
-                  }`}
-                >
-                  Pieces Count <span className="text-amber-500">*</span>
-                </label>
-                <span
-                  className={`text-[11px] font-mono ${
-                    isBright ? 'text-[#64748B]' : 'text-neutral-400'
-                  }`}
-                >
-                  Units
-                </span>
-              </div>
+              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
+                Ordered Quantity <span className="text-amber-500">*</span>
+              </label>
               <input
                 type="number"
                 min="1"
-                required
-                value={initialPieces}
-                onChange={(e) => {
-                  setInitialPieces(e.target.value);
-                  setIsWeightManuallyEdited(false);
-                }}
-                className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${
-                  isBright
-                    ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-500/30'
-                    : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
-                }`}
+                step="1"
+                value={orderedQuantity}
+                onChange={(event) => setOrderedQuantity(event.target.value)}
+                placeholder="Pieces requested from the Wax karigar, e.g. 500"
+                className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${isBright ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600' : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500'}`}
               />
-              {/* Quick Stepper Chips */}
-              <div className="flex items-center gap-1.5 mt-2">
-                {[100, 200, 500].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => handlePiecesQuickSelect(preset, true)}
-                    className={`px-2 py-1 text-[11px] rounded-lg font-mono font-medium transition border ${
-                      parseInt(initialPieces, 10) === preset
-                        ? isBright
-                          ? 'bg-[#0F172A] text-white border-[#0F172A]'
-                          : 'bg-amber-400 text-neutral-950 border-amber-400 font-bold'
-                        : isBright
-                        ? 'bg-white hover:bg-slate-100 text-[#475569] border-[#CBD5E1]'
-                        : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700'
-                    }`}
-                  >
-                    {preset} pcs
-                  </button>
-                ))}
-              </div>
+              <p className={`mt-1.5 text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-500'}`}>
+                This is the requested quantity, not a manual count of the received lot.
+              </p>
             </div>
 
-            {/* Initial Weight */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label
-                  className={`text-xs font-semibold uppercase tracking-wider ${
-                    isBright ? 'text-[#3F3F46]' : 'text-neutral-300'
-                  }`}
-                >
-                  Initial Weight (g) <span className="text-amber-500">*</span>
-                </label>
-                {isWeightManuallyEdited && (
-                  <button
-                    type="button"
-                    onClick={handleResetWeightToBaseline}
-                    className={`text-[10px] underline font-medium ${
-                      isBright
-                        ? 'text-amber-700 hover:text-amber-900'
-                        : 'text-amber-400 hover:text-amber-300'
-                    }`}
-                  >
-                    Reset to baseline
-                  </button>
-                )}
-              </div>
+              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
+                Total Wax Received Weight (g) <span className={isBright ? 'text-slate-400' : 'text-neutral-500'}>— optional</span>
+              </label>
               <input
                 type="number"
                 step="0.01"
                 min="0.1"
-                required
                 value={initialWeight}
-                onChange={(e) => {
-                  setInitialWeight(e.target.value);
-                  setIsWeightManuallyEdited(true);
-                }}
-                className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${
-                  isBright
-                    ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-500/30'
-                    : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
-                }`}
+                placeholder="Enter measured total batch weight"
+                onChange={(e) => setInitialWeight(e.target.value)}
+                className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${isBright ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:bg-white focus:ring-1 focus:ring-amber-500/30' : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'}`}
               />
-              <div className="mt-2 text-[11px] flex items-center justify-between">
-                <span
-                  className={
-                    isBright ? 'text-[#64748B]' : 'text-neutral-400'
-                  }
-                >
-                  Ratio:
-                </span>
-                {computedEffectiveAvgWeight && (
-                  <span
-                    className={`font-mono font-semibold ${
-                      isBright ? 'text-[#1E293B]' : 'text-neutral-200'
-                    }`}
-                  >
-                    ~{computedEffectiveAvgWeight} g / pc
-                  </span>
-                )}
+            </div>
+
+            <div>
+              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
+                Wax Karigar’s Stated Pieces <span className={isBright ? 'text-slate-400' : 'text-neutral-500'}>— optional until receipt</span>
+              </label>
+              <input type="number" min="1" step="1" value={statedPieces} onChange={(e) => setStatedPieces(e.target.value)} placeholder="Count written on the karigar’s slip" className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${isBright ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-600' : 'bg-[#121214] border-neutral-700 text-neutral-100 focus:border-amber-500'}`} />
+              {statedPieceCount > 0 && initialPieces > 0 && <p className={`mt-2 text-xs ${hasDiscrepancy ? 'text-amber-500' : isBright ? 'text-emerald-700' : 'text-emerald-300'}`}>
+                Ordered {orderedPieceCount || '—'} pcs · karigar stated {statedPieceCount} pcs · weight estimate {initialPieces} pcs{orderedPieceCount > 0 ? orderedDifference > 0 ? ` · short by ${orderedDifference}` : orderedDifference < 0 ? ` · extra ${Math.abs(orderedDifference)}` : ' · exact ordered quantity' : ''}{hasDiscrepancy ? ` · discrepancy warning (${discrepancyGrams.toFixed(2)} g)` : ' · stated count is within the expected range'}
+              </p>}
+            </div>
+
+            {hasWaxReceipt && needsCalibration && (
+              <div className={`p-4 rounded-2xl border space-y-3 ${isBright ? 'bg-amber-50 border-amber-200' : 'bg-amber-950/30 border-amber-500/30'}`}>
+                <div>
+                  <h4 className={`text-xs font-bold uppercase tracking-wide ${isBright ? 'text-amber-900' : 'text-amber-300'}`}>
+                    First {startingStage} Ruler Calibration
+                  </h4>
+                  <p className={`text-xs mt-1 ${isBright ? 'text-amber-900/80' : 'text-amber-200/80'}`}>
+                    No {startingStage} ruler exists for this design yet. Weigh and count a small representative sample only — not the whole lot.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`text-xs font-semibold ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
+                    Sample Piece Count
+                    <input type="number" min="1" step="1" value={samplePieces} onChange={(e) => setSamplePieces(e.target.value)} placeholder="e.g. 200" className={`mt-1 w-full px-3 py-2 rounded-lg border font-mono ${isBright ? 'bg-white border-[#CBD5E1] text-[#0F172A]' : 'bg-neutral-900 border-neutral-700 text-neutral-100'}`} />
+                  </label>
+                  <label className={`text-xs font-semibold ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
+                    Sample Weight (g)
+                    <input type="number" min="0.01" step="0.01" value={sampleWeight} onChange={(e) => setSampleWeight(e.target.value)} placeholder="Weight of sample only" className={`mt-1 w-full px-3 py-2 rounded-lg border font-mono ${isBright ? 'bg-white border-[#CBD5E1] text-[#0F172A]' : 'bg-neutral-900 border-neutral-700 text-neutral-100'}`} />
+                  </label>
+                </div>
+                {sampleRuler > 0 && <p className={`text-xs font-mono ${isBright ? 'text-amber-900' : 'text-amber-200'}`}>Ruler: {sampleWeightGrams} g ÷ {samplePieceCount} pcs = {sampleRuler.toFixed(4)} g/pc</p>}
               </div>
+            )}
+
+            <div className={`p-3 rounded-xl border ${isBright ? 'bg-emerald-50 border-emerald-200' : 'bg-emerald-950/20 border-emerald-800/50'}`}>
+              <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className={`text-xs font-semibold ${isBright ? 'text-emerald-900' : 'text-emerald-300'}`}>Estimated Wax Pieces Received</p>
+                <p className={`text-[10px] mt-0.5 ${isBright ? 'text-emerald-800/80' : 'text-emerald-200/70'}`}>
+                  {activeRuler > 0 ? `${initialWeightGrams || 'Total weight'} g ÷ ${activeRuler.toFixed(4)} g/pc` : 'Enter sample measurements to calculate'}
+                </p>
+              </div>
+              <strong className={`font-mono text-lg ${isBright ? 'text-emerald-900' : 'text-emerald-200'}`}>{initialPieces > 0 ? `${initialPieces} pcs` : '—'}</strong>
+              </div>
+              {orderedPieceCount > 0 && initialPieces > 0 && (
+                <div className={`mt-3 pt-2.5 border-t flex items-center justify-between text-xs ${isBright ? 'border-emerald-200 text-emerald-900' : 'border-emerald-800/60 text-emerald-200'}`}>
+                  <span>Ordered: <strong className="font-mono">{orderedPieceCount} pcs</strong></span>
+                  <span className={`font-bold font-mono ${orderedDifference > 0 ? 'text-amber-500' : orderedDifference < 0 ? 'text-blue-500' : 'text-emerald-500'}`}>
+                    {orderedDifference > 0 ? `Short by ${orderedDifference}` : orderedDifference < 0 ? `Extra ${Math.abs(orderedDifference)}` : 'Exact quantity'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Section 4: Artisan (Karigar) Assignment */}
+          {/* Section 4: Karigar Assignment */}
           <div
             className={`p-4 rounded-2xl border transition-colors space-y-3 ${
               isBright
@@ -503,7 +462,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                   isBright ? 'text-[#3F3F46]' : 'text-neutral-300'
                 }`}
               >
-                Assign Starting Karigar ({startingStage}){' '}
+                Wax Received From{' '}
                 <span className="text-amber-500">*</span>
               </label>
               <span
@@ -512,30 +471,47 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                 }`}
               >
                 <UserCheck className="w-3.5 h-3.5" />
-                Artisan Routing
+                Karigar Routing
               </span>
             </div>
 
-            <select
-              required
+            <SearchableSelect
               value={karigarId}
-              onChange={(e) => setKarigarId(e.target.value)}
+              onChange={setKarigarId}
+              bright={isBright}
+              placeholder="Select Karigar..."
+              searchPlaceholder="Search karigars…"
               className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none transition ${
                 isBright
                   ? 'bg-white border-[#CBD5E1] text-[#0F172A] focus:border-amber-600 focus:ring-1 focus:ring-amber-500/30'
                   : 'bg-neutral-900 border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
               }`}
-            >
-              <option value="">Select Karigar...</option>
-              {karigars.map((k) => {
-                const specializes = k.specialtyStages.includes(startingStage);
-                return (
-                  <option key={k.id} value={k.id}>
-                    {k.name} ({k.phone}) {specializes ? '⭐ [Recommended for ' + startingStage + ']' : ''}
-                  </option>
-                );
-              })}
-            </select>
+              options={[
+                { value: '', label: 'Select Karigar...' },
+                ...karigars.map((k) => {
+                  const specializes = k.specialtyStages.includes(startingStage);
+                  return {
+                    value: k.id,
+                    label: `${k.name}${k.phone ? ` (${k.phone})` : ''} ${specializes ? `⭐ [Recommended for ${startingStage}]` : ''}`,
+                  };
+                }),
+              ]}
+            />
+
+            <div>
+              <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${isBright ? 'text-[#3F3F46]' : 'text-neutral-300'}`}>
+                Slip Amount (₹) <span className="text-amber-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={jobWorkAmount}
+                onChange={(event) => setJobWorkAmount(event.target.value)}
+                placeholder="Job-work price shown on the slip"
+                className={`w-full px-3.5 py-2.5 rounded-xl border font-mono text-sm font-semibold outline-none transition ${isBright ? 'bg-white border-[#CBD5E1] text-[#0F172A] focus:border-amber-600' : 'bg-neutral-900 border-neutral-700 text-neutral-100 focus:border-amber-500'}`}
+              />
+            </div>
 
             {selectedKarigar && (
               <div
@@ -548,13 +524,15 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                 <span className="font-medium">
                   Specialties: {selectedKarigar.specialtyStages.join(', ')}
                 </span>
-                <span
-                  className={`font-mono text-[11px] ${
-                    isBright ? 'text-[#64748B]' : 'text-neutral-400'
-                  }`}
-                >
-                  Ph: {selectedKarigar.phone}
-                </span>
+                {selectedKarigar.phone && (
+                  <span
+                    className={`font-mono text-[11px] ${
+                      isBright ? 'text-[#64748B]' : 'text-neutral-400'
+                    }`}
+                  >
+                    Mobile: {selectedKarigar.phone}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -578,10 +556,11 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-neutral-950 shadow-md shadow-amber-500/20 transition flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-neutral-950 shadow-md shadow-amber-500/20 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
             >
-              <Package className="w-4 h-4" />
-              <span>Create Lot &amp; Generate Slip</span>
+              {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+              <span>{isSubmitting ? 'Creating Lot…' : hasWaxReceipt ? 'Create Lot & Generate Receipt Slip' : 'Create Lot — Await Wax Receipt'}</span>
             </button>
           </div>
         </form>
@@ -589,4 +568,3 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
     </div>
   );
 };
-

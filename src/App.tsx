@@ -3,13 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { AppProvider, useApp } from './context/AppContext';
 import { ActiveTab } from './components/Navigation';
 import { DashboardView } from './components/views/DashboardView';
 import { DesignsView } from './components/views/DesignsView';
 import { LotsView } from './components/views/LotsView';
 import { ReadyStockView } from './components/views/ReadyStockView';
+import { KarigarLedgerView } from './components/views/KarigarLedgerView';
 
 // Android Framework Components
 import { AndroidDeviceFrame } from './components/android/AndroidDeviceFrame';
@@ -30,28 +33,55 @@ import { LotDetailModal } from './components/LotDetailModal';
 import { ProfileModal } from './components/ProfileModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LoginScreen } from './components/LoginScreen';
+import { AdminUsersModal } from './components/AdminUsersModal';
 
 import { AuthAndThemeProvider, useAuthAndTheme } from './context/AuthAndThemeContext';
 import { Design, Lot, Stage } from './types';
 
+const StartupSplash: React.FC = () => (
+  <div className="flex-1 min-h-0 flex items-center justify-center bg-white">
+    <div className="flex flex-col items-center justify-center">
+      <img
+        src="/shreenathji-logo.png"
+        alt="Shreenathji Imitation"
+        className="w-28 h-28 sm:w-32 sm:h-32 object-contain"
+      />
+      <div
+        className="mt-5 w-5 h-5 rounded-full border-2 border-[#E07A5F]/30 border-t-[#E07A5F] animate-spin"
+        role="status"
+        aria-label="Loading"
+      />
+    </div>
+  </div>
+);
+
 const MainApp: React.FC = () => {
-  const { designs, lots } = useApp();
-  const { isLoggedIn, theme } = useAuthAndTheme();
+  const { designs, lots, isLoading, dataError, refreshData } = useApp();
+  const { isLoggedIn, isAuthReady, isAdmin, theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const tabHistoryRef = useRef<ActiveTab[]>(['dashboard']);
 
-  // Dedicated Android App: on screens wider than 430px, always render the authentic smartphone chassis; on real mobile phones (<=430px), fit edge-to-edge
+  const navigateToTab = useCallback((tab: ActiveTab) => {
+    if (activeTab !== tab) tabHistoryRef.current.push(tab);
+    setActiveTab(tab);
+  }, [activeTab]);
+
+  // Render the simulated phone only on a desktop-sized viewport with a mouse.
+  // Real phones/tablets use their own system status and navigation bars.
+  const shouldShowDesktopDevicePreview = () =>
+    typeof window !== 'undefined' &&
+    window.innerWidth > 768 &&
+    window.matchMedia('(pointer: fine)').matches;
   const [isFramed, setIsFramed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth > 430;
-    }
-    return true;
+    return shouldShowDesktopDevicePreview();
   });
 
   // Profile and Settings Modals
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isAdminUsersOpen, setIsAdminUsersOpen] = useState<boolean>(false);
 
   // Android Recents Multi-tasking switcher modal
   const [isRecentsOpen, setIsRecentsOpen] = useState<boolean>(false);
@@ -85,10 +115,10 @@ const MainApp: React.FC = () => {
     undefined
   );
 
-  // Maintain smartphone frame on any desktop/tablet viewport, edge-to-edge on real phones
+  // Keep the simulated phone frame on desktop only.
   useEffect(() => {
     const handleResize = () => {
-      setIsFramed(window.innerWidth > 430);
+      setIsFramed(shouldShowDesktopDevicePreview());
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -124,7 +154,7 @@ const MainApp: React.FC = () => {
   };
 
   // Android System Navigation Key Actions
-  const handleAndroidBack = () => {
+  const handleAndroidBack = useCallback((): boolean => {
     if (isSettingsOpen) {
       setIsSettingsOpen(false);
       setIsProfileOpen(true);
@@ -148,10 +178,45 @@ const MainApp: React.FC = () => {
       setIsCreateDesignOpen(false);
     } else if (isCreateLotOpen) {
       setIsCreateLotOpen(false);
-    } else if (activeTab !== 'dashboard') {
-      setActiveTab('dashboard');
+    } else if (tabHistoryRef.current.length > 1) {
+      tabHistoryRef.current.pop();
+      const previousTab = tabHistoryRef.current[tabHistoryRef.current.length - 1] ?? 'dashboard';
+      setActiveTab(previousTab);
+    } else {
+      return false;
     }
-  };
+    return true;
+  }, [
+    isSettingsOpen,
+    isProfileOpen,
+    isRecentsOpen,
+    isScannerOpen,
+    selectedSlipData,
+    selectedStep6Data,
+    selectedStep7Lot,
+    selectedStageDetail,
+    selectedLotDetail,
+    isCreateDesignOpen,
+    isCreateLotOpen,
+  ]);
+
+  // Capacitor intercepts Android hardware Back while this listener is active.
+  // Navigate through overlays and visited tabs first; exit only at the root.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let isActive = true;
+    let removeListener: (() => void) | undefined;
+    void CapacitorApp.addListener('backButton', () => {
+      if (!handleAndroidBack()) void CapacitorApp.exitApp();
+    }).then((listener) => {
+      if (isActive) removeListener = () => void listener.remove();
+      else void listener.remove();
+    });
+    return () => {
+      isActive = false;
+      removeListener?.();
+    };
+  }, [handleAndroidBack]);
 
   const handleAndroidHome = () => {
     // Return to dashboard and close all overlays
@@ -166,6 +231,7 @@ const MainApp: React.FC = () => {
     setSelectedLotDetail(null);
     setIsCreateDesignOpen(false);
     setIsCreateLotOpen(false);
+    tabHistoryRef.current = ['dashboard'];
     setActiveTab('dashboard');
   };
 
@@ -181,8 +247,26 @@ const MainApp: React.FC = () => {
       onHome={handleAndroidHome}
       onRecents={handleAndroidRecents}
     >
-      {!isLoggedIn ? (
+      {!isAuthReady ? (
+        <StartupSplash />
+      ) : !isLoggedIn ? (
         <LoginScreen />
+      ) : isLoading ? (
+        <StartupSplash />
+      ) : dataError ? (
+        <div className="flex-1 flex items-center justify-center bg-[#1E1C1A] text-stone-200 px-6 text-center">
+          <div className="max-w-sm">
+            <p className="text-sm font-semibold text-red-300">Database synchronization failed</p>
+            <p className="text-xs text-stone-400 mt-2 break-words">{dataError}</p>
+            <button
+              type="button"
+              onClick={() => void refreshData()}
+              className="mt-4 px-4 py-2 rounded-xl bg-[#C5A059] text-stone-950 text-xs font-bold"
+            >
+              Retry synchronization
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 relative overflow-x-hidden overflow-y-hidden w-full max-w-full">
           {/* Android Top App Bar with Profile and quick actions */}
@@ -237,6 +321,8 @@ const MainApp: React.FC = () => {
             {activeTab === 'ready_stock' && (
               <ReadyStockView onOpenLot={handleOpenLot} />
             )}
+
+            {activeTab === 'ledger' && <KarigarLedgerView />}
           </div>
 
           {/* Android Floating Quick Action Buttons */}
@@ -251,7 +337,7 @@ const MainApp: React.FC = () => {
           {/* Android Material 3 Bottom Navigation Bar */}
           <AndroidBottomNav
             activeTab={activeTab}
-            onSelectTab={setActiveTab}
+            onSelectTab={navigateToTab}
             onOpenScanner={() => handleOpenScannerWithMode('confirm_arrival')}
           />
 
@@ -259,7 +345,7 @@ const MainApp: React.FC = () => {
           <AndroidRecentsModal
             isOpen={isRecentsOpen}
             onClose={() => setIsRecentsOpen(false)}
-            onSelectTab={setActiveTab}
+            onSelectTab={navigateToTab}
             onOpenScanner={() => handleOpenScannerWithMode('confirm_arrival')}
           />
         </div>
@@ -301,7 +387,7 @@ const MainApp: React.FC = () => {
             if (selectedLotDetail?.id === updatedLot.id) {
               setSelectedLotDetail(updatedLot);
             }
-            // Auto-advance: As soon as "Complete Stage" is clicked, immediately opens the next step to assign the artisan:
+            // Auto-advance: As soon as "Complete Stage" is clicked, immediately opens the next step to assign the karigar:
             setSelectedStep7Lot(updatedLot);
           }}
         />
@@ -348,7 +434,7 @@ const MainApp: React.FC = () => {
           initialMode={scannerInitialMode}
           onClose={() => setIsScannerOpen(false)}
           onSelectDesign={(design) => {
-            setActiveTab('designs');
+            navigateToTab('designs');
           }}
           onSelectLot={(lot) => {
             setSelectedLotDetail(lot);
@@ -362,7 +448,7 @@ const MainApp: React.FC = () => {
           onClose={() => setIsCreateDesignOpen(false)}
           onSuccess={() => {
             setIsCreateDesignOpen(false);
-            setActiveTab('designs');
+            navigateToTab('designs');
           }}
         />
       )}
@@ -372,16 +458,13 @@ const MainApp: React.FC = () => {
         <CreateLotModal
           preselectedDesignId={preselectedDesignIdForLot}
           onClose={() => setIsCreateLotOpen(false)}
-          onSuccess={(lotNumber) => {
+          onSuccess={(createdLot) => {
             setIsCreateLotOpen(false);
-            const createdLot = lots.find((l) => l.lotNumber === lotNumber);
-            if (createdLot) {
-              const design = designs.find((d) => d.id === createdLot.designId);
-              if (design) {
-                setSelectedSlipData({ lot: createdLot, design });
-              }
+            const design = designs.find((d) => d.id === createdLot.designId);
+            if (design && createdLot.status !== 'awaiting_wax_receipt') {
+              setSelectedSlipData({ lot: createdLot, design });
             }
-            setActiveTab('lots');
+            navigateToTab('lots');
           }}
         />
       )}
@@ -394,6 +477,10 @@ const MainApp: React.FC = () => {
           setIsProfileOpen(false);
           setIsSettingsOpen(true);
         }}
+        onOpenAdmin={() => {
+          setIsProfileOpen(false);
+          setIsAdminUsersOpen(true);
+        }}
       />
 
       {/* App Settings Modal (Dark & Bright Mode Toggle, Audio, Feedback) */}
@@ -405,6 +492,13 @@ const MainApp: React.FC = () => {
           setIsProfileOpen(true);
         }}
       />
+
+      {isAdmin && (
+        <AdminUsersModal
+          isOpen={isAdminUsersOpen}
+          onClose={() => setIsAdminUsersOpen(false)}
+        />
+      )}
     </AndroidDeviceFrame>
   );
 };

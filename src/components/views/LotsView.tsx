@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
+import { SearchableSelect } from '../SearchableSelect';
 import { Lot, Design, Stage, LotStatus } from '../../types';
 import {
   Layers,
@@ -41,6 +42,13 @@ export const LotsView: React.FC<LotsViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
 
+  const lotCreatedTime = (lot: Lot) => {
+    const generatedIdTimestamp = /^lot-(\d+)$/.exec(lot.id)?.[1];
+    if (generatedIdTimestamp) return Number(generatedIdTimestamp);
+    const createdAtTimestamp = Date.parse(lot.createdAt);
+    return Number.isFinite(createdAtTimestamp) ? createdAtTimestamp : 0;
+  };
+
   const filteredLots = lots.filter((lot) => {
     const matchesSearch =
       lot.lotNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,7 +59,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
     const matchesStatus = statusFilter === 'all' || lot.status === statusFilter;
 
     return matchesSearch && matchesStage && matchesStatus;
-  });
+  }).sort((left, right) => lotCreatedTime(right) - lotCreatedTime(left));
 
   return (
     <div className="space-y-6 pb-12 overflow-x-hidden w-full max-w-full">
@@ -105,41 +113,41 @@ export const LotsView: React.FC<LotsViewProps> = ({
 
           {/* Filters Row */}
           <div className="grid grid-cols-2 gap-2">
-            <select
+            <SearchableSelect
               value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
+              onChange={setStageFilter}
+              bright={isBright}
+              searchPlaceholder="Search stages…"
               className={`px-2.5 py-1.5 rounded-lg border text-xs outline-none transition ${
                 isBright
                   ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
                   : 'bg-neutral-900 border-neutral-800 text-neutral-200 focus:border-amber-500'
               }`}
-            >
-              <option value="all">All Stages</option>
-              <option value="Wax">Wax</option>
-              <option value="Casting">Casting</option>
-              <option value="Buff">Buff</option>
-              <option value="Zabora">Zabora</option>
-              <option value="Dull">Dull</option>
-              <option value="Chhol">Chhol</option>
-              <option value="Plating">Plating</option>
-              <option value="Ready Stock">Ready Stock</option>
-            </select>
+              options={[
+                { value: 'all', label: 'All Stages' },
+                ...['Wax', 'Casting', 'Buff', 'Zabora', 'Dull', 'Chhol', 'Plating', 'Ready Stock'].map((stage) => ({ value: stage, label: stage })),
+              ]}
+            />
 
-            <select
+            <SearchableSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={setStatusFilter}
+              bright={isBright}
+              searchPlaceholder="Search statuses…"
               className={`px-2.5 py-1.5 rounded-lg border text-xs outline-none transition ${
                 isBright
                   ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
                   : 'bg-neutral-900 border-neutral-800 text-neutral-200 focus:border-amber-500'
               }`}
-            >
-              <option value="all">All Statuses</option>
-              <option value="in_progress">In Progress</option>
-              <option value="arrived_awaiting_entry">Arrived (Red)</option>
-              <option value="stage_complete">Complete (Green)</option>
-              <option value="ready_stock">Ready Stock</option>
-            </select>
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'awaiting_wax_receipt', label: 'Awaiting Wax Receipt' },
+                { value: 'in_progress', label: 'In Progress' },
+                { value: 'arrived_awaiting_entry', label: 'Arrived (Red)' },
+                { value: 'stage_complete', label: 'Complete (Green)' },
+                { value: 'ready_stock', label: 'Ready Stock' },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -161,6 +169,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
             const design = designs.find((d) => d.id === lot.designId);
             const lastRec = lot.history[lot.history.length - 1];
 
+            const isAwaitingWaxReceipt = lot.status === 'awaiting_wax_receipt';
             const isArrivedAwaitingEntry = lot.status === 'arrived_awaiting_entry';
             const isStageComplete = lot.status === 'stage_complete';
             const isInProgress = lot.status === 'in_progress';
@@ -170,7 +179,11 @@ export const LotsView: React.FC<LotsViewProps> = ({
               <div
                 key={lot.id}
                 className={`p-3 rounded-xl border transition flex flex-col justify-between gap-3 shadow-sm ${
-                  isBright
+                  isAwaitingWaxReceipt
+                    ? isBright
+                      ? 'bg-violet-50/60 border-violet-300 hover:border-violet-400'
+                      : 'bg-violet-950/15 border-violet-500/35 hover:border-violet-500/60'
+                    : isBright
                     ? 'bg-white border-[#E4E4E7] hover:border-slate-300'
                     : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700'
                 }`}
@@ -206,6 +219,11 @@ export const LotsView: React.FC<LotsViewProps> = ({
                       </span>
 
                       {/* Status indicator */}
+                      {isAwaitingWaxReceipt && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-500 border border-violet-500/35 font-bold">
+                          Awaiting Wax Receipt
+                        </span>
+                      )}
                       {isArrivedAwaitingEntry && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-500 border border-red-500/40 font-bold animate-pulse">
                           Arrived, awaiting entry
@@ -257,27 +275,45 @@ export const LotsView: React.FC<LotsViewProps> = ({
                       </span>
                       <span>&bull;</span>
                       <span>
-                        Sent:{' '}
+                        {isAwaitingWaxReceipt ? 'Ordered:' : lot.currentStage === 'Wax' ? 'Received:' : 'Sent:'}{' '}
                         <strong
                           className={`font-mono ${
                             isBright ? 'text-slate-900' : 'text-neutral-200'
                           }`}
                         >
-                          {lastRec?.weightSent || lot.initialWeight}g
+                          {isAwaitingWaxReceipt
+                            ? `${lastRec?.orderedQuantity ?? '—'} pcs`
+                            : `${lot.currentStage === 'Wax' ? (lastRec?.weightReceived ?? lot.initialWeight) : (lastRec?.weightSent ?? lot.initialWeight)}g`}
                         </strong>
                       </span>
                       <span>&bull;</span>
                       <span>
-                        Pcs:{' '}
+                        {isAwaitingWaxReceipt ? 'Wax receipt:' : lot.currentStage === 'Wax' ? 'Estimated pcs:' : 'Pcs:'}{' '}
                         <strong
                           className={`font-mono ${
                             isBright ? 'text-slate-900' : 'text-neutral-200'
                           }`}
                         >
-                          {lastRec?.piecesSent || lot.initialPieces}
+                          {isAwaitingWaxReceipt ? 'Pending' : lot.currentStage === 'Wax' ? (lastRec?.estimatedPieces ?? lot.initialPieces) : (lastRec?.piecesSent ?? lot.initialPieces)}
                         </strong>
                       </span>
-                      {lastRec?.weightLoss !== undefined && (
+                      {!isAwaitingWaxReceipt && lot.currentStage === 'Wax' && lastRec?.orderedQuantity != null && (
+                        <>
+                          <span>&bull;</span>
+                          <span>
+                            Ordered: <strong className="font-mono">{lastRec.orderedQuantity}</strong>
+                          </span>
+                          <span>&bull;</span>
+                          <span className={`font-mono font-semibold ${lastRec.orderedQuantity > (lastRec.estimatedPieces ?? lot.initialPieces) ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            {lastRec.orderedQuantity > (lastRec.estimatedPieces ?? lot.initialPieces)
+                              ? `Short ${lastRec.orderedQuantity - (lastRec.estimatedPieces ?? lot.initialPieces)}`
+                              : lastRec.orderedQuantity < (lastRec.estimatedPieces ?? lot.initialPieces)
+                                ? `Extra ${(lastRec.estimatedPieces ?? lot.initialPieces) - lastRec.orderedQuantity}`
+                                : 'Exact'}
+                          </span>
+                        </>
+                      )}
+                      {lot.currentStage !== 'Wax' && lastRec?.weightLoss !== undefined && (
                         <>
                           <span>&bull;</span>
                           <span className="text-amber-500 font-mono font-semibold">
@@ -291,7 +327,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  {design && (
+                  {design && !isAwaitingWaxReceipt && (
                     <button
                       onClick={() => onOpenSlip(lot, design)}
                       title="Print Stage Slip"

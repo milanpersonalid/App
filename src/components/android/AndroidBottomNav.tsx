@@ -4,6 +4,7 @@ import {
   Layers,
   Sparkles,
   Archive,
+  ReceiptText,
 } from 'lucide-react';
 import { ActiveTab } from '../Navigation';
 import { useApp } from '../../context/AppContext';
@@ -19,15 +20,8 @@ export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
   activeTab,
   onSelectTab,
 }) => {
-  const { lots, getReadyStockSummary } = useApp();
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
-
-  const awaitingEntryCount = lots.filter((l) => l.status === 'arrived_awaiting_entry').length;
-  const stageCompleteCount = lots.filter((l) => l.status === 'stage_complete').length;
-  const lotsBadge = awaitingEntryCount + stageCompleteCount;
-
-  const lowStockCount = getReadyStockSummary().filter((s) => s.isLowStock).length;
 
   const triggerHaptic = () => {
     try {
@@ -39,11 +33,12 @@ export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
     }
   };
 
-  const navItems: { id: ActiveTab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [
+  const navItems: { id: ActiveTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
     { id: 'designs', label: 'Designs', icon: Sparkles },
-    { id: 'lots', label: 'Lots', icon: Layers, badge: lotsBadge || undefined },
-    { id: 'ready_stock', label: 'Stock', icon: Archive, badge: lowStockCount || undefined },
+    { id: 'lots', label: 'Lots', icon: Layers },
+    { id: 'ledger', label: 'Ledger', icon: ReceiptText },
+    { id: 'ready_stock', label: 'Stock', icon: Archive },
   ];
 
   return (
@@ -88,12 +83,6 @@ export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
                 }`}
               />
 
-              {/* Notification Badge */}
-              {item.badge !== undefined && item.badge > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#A8556B] text-white text-[9px] font-bold font-mono flex items-center justify-center border border-[#292930] shadow-sm">
-                  {item.badge > 99 ? '99+' : item.badge}
-                </span>
-              )}
             </div>
 
             {/* Label */}

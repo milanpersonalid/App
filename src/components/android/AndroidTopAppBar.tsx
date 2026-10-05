@@ -5,7 +5,6 @@ import {
   Camera,
   Download,
   Info,
-  RotateCcw,
   Sparkles,
   PlusCircle,
   Settings,
@@ -34,7 +33,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
   onOpenProfile,
   onOpenSettings,
 }) => {
-  const { lots, resetToDefaultData } = useApp();
+  const { lots } = useApp();
   const { currentUser, logout, theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
   const { isInstallable, isInstalled, install } = usePWAInstall();
@@ -199,23 +198,6 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
                   <span>Install App (.apk / PWA)</span>
                 </button>
               )}
-
-              {/* Reset Data */}
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (window.confirm('Reset all factory lots and designs to fresh state?')) {
-                    resetToDefaultData();
-                  }
-                }}
-                className={`w-full px-4 py-2 text-left flex items-center gap-2.5 transition ${
-                  isBright ? 'hover:bg-stone-100 text-[#78716C]' : 'hover:bg-stone-800 text-[#A8A29E]'
-                }`}
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Reset Factory Data</span>
-              </button>
 
               {/* App Info */}
               <button

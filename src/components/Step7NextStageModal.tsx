@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Lot, Stage, BranchType, Karigar } from '../types';
+import { Lot, Stage, BranchType, NEXT_STAGE_OPTIONS } from '../types';
 import { useApp } from '../context/AppContext';
-import { ArrowRight, Sparkles, Check, X, ShieldAlert, Printer } from 'lucide-react';
+import { SearchableSelect } from './SearchableSelect';
+import { ArrowRight, Sparkles, X, ShieldAlert, Printer } from 'lucide-react';
 
 interface Step7NextStageModalProps {
   lot: Lot;
@@ -50,25 +51,19 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
       },
     ];
   } else {
-    // Normal fixed sequence: Wax → Casting → Buff → Zabora → Dull → Chhol
-    const sequence: Stage[] = ['Wax', 'Casting', 'Buff', 'Zabora', 'Dull', 'Chhol'];
-    const currentIndex = sequence.indexOf(lot.currentStage);
-    if (currentIndex !== -1 && currentIndex < sequence.length - 1) {
-      const nextStg = sequence[currentIndex + 1];
-      availableStages = [
-        {
-          stage: nextStg,
-          label: `Next Stage: ${nextStg}`,
-          branch: 'none',
-          desc: `Proceed to ${nextStg} stage in fixed sequence.`,
-        },
-      ];
-    }
+    availableStages = (NEXT_STAGE_OPTIONS[lot.currentStage] ?? []).map((stage, index) => ({
+      stage,
+      label: index === 0 ? `Next Stage: ${stage}` : stage,
+      branch: 'none' as BranchType,
+      desc: `Send this lot directly to ${stage}. Stages between are skipped.`,
+    }));
   }
 
   const [selectedOption, setSelectedOption] = useState(availableStages[0] || null);
   const [selectedKarigarId, setSelectedKarigarId] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [jobWorkAmount, setJobWorkAmount] = useState<string>('');
 
   // Auto-suggest specialty karigar when stage option is chosen
   useEffect(() => {
@@ -76,8 +71,6 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
       const match = karigars.find((k) => k.specialtyStages.includes(selectedOption.stage));
       if (match) {
         setSelectedKarigarId(match.id);
-      } else if (karigars.length > 0 && !selectedKarigarId) {
-        setSelectedKarigarId(karigars[0].id);
       }
     }
   }, [selectedOption, karigars]);
@@ -86,12 +79,13 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
   const isMovingToReadyStock = selectedOption?.stage === 'Ready Stock';
   const filteredKarigars = karigars.filter((k) =>
     selectedOption?.stage && selectedOption.stage !== 'Ready Stock'
-      ? k.specialtyStages.includes(selectedOption.stage) || true // Allow any karigar, prioritize specialty
+      ? k.specialtyStages.includes(selectedOption.stage)
       : true
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!selectedOption) {
       setError('Please select the next stage.');
       return;
@@ -102,19 +96,32 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
       return;
     }
 
-    const res = advanceToNextStage(
-      lot.id,
-      selectedOption.stage,
-      selectedOption.branch,
-      selectedKarigarId || lot.currentKarigarId
-    );
+    const amount = parseFloat(jobWorkAmount);
+    if (!isMovingToReadyStock && (!Number.isFinite(amount) || amount < 0)) {
+      setError('Enter the job-work amount for the printed slip. Use 0 if there is no charge.');
+      return;
+    }
 
-    if (res.success && res.lot) {
-      onSuccess(res.lot);
-    } else if (res.success) {
-      onSuccess(lot);
-    } else {
-      setError(res.message);
+    setError('');
+    setIsSaving(true);
+    try {
+      const res = await advanceToNextStage(
+        lot.id,
+        selectedOption.stage,
+        selectedOption.branch,
+        selectedKarigarId || lot.currentKarigarId,
+        isMovingToReadyStock ? 0 : Number(amount.toFixed(2))
+      );
+
+      if (res.success && res.lot) {
+        onSuccess(res.lot);
+      } else if (res.success) {
+        onSuccess(lot);
+      } else {
+        setError(res.message);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -165,49 +172,26 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
               Select Next Destination {isAtChhol && <span className="text-amber-400">(Branching Point)</span>}
             </label>
 
-            {availableStages.map((opt, idx) => {
-              const isSelected = selectedOption?.stage === opt.stage && selectedOption?.branch === opt.branch;
-              return (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    setSelectedOption(opt);
-                    setSelectedKarigarId('');
-                  }}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-amber-500/10 border-amber-500/60 ring-1 ring-amber-500/40 text-neutral-100'
-                      : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm flex items-center gap-2">
-                      {opt.label}
-                      {opt.branch === 'gold' && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-mono font-bold">
-                          GOLD BRANCH
-                        </span>
-                      )}
-                      {opt.branch === 'plain' && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-400/20 text-blue-300 font-mono font-bold">
-                          PLAIN BRANCH
-                        </span>
-                      )}
-                    </span>
-                    <div
-                      className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        isSelected
-                          ? 'border-amber-400 bg-amber-400 text-neutral-950'
-                          : 'border-neutral-700'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                    </div>
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-1">{opt.desc}</p>
-                </div>
-              );
-            })}
+            <SearchableSelect
+              value={selectedOption ? `${selectedOption.stage}|${selectedOption.branch}` : ''}
+              onChange={(value) => {
+                const option = availableStages.find(
+                  (item) => `${item.stage}|${item.branch}` === value
+                );
+                setSelectedOption(option ?? null);
+                setSelectedKarigarId('');
+                setJobWorkAmount('');
+              }}
+              searchPlaceholder="Search destinations…"
+              className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-sm focus:border-amber-500 outline-none"
+              options={availableStages.map((option) => ({
+                value: `${option.stage}|${option.branch}`,
+                label: option.label,
+              }))}
+            />
+            {selectedOption && (
+              <p className="text-xs text-neutral-400">{selectedOption.desc}</p>
+            )}
           </div>
 
           {/* If advancing to another stage (not directly Ready Stock), require Karigar assignment */}
@@ -216,22 +200,39 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
               <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300">
                 Assign Karigar for {selectedOption?.stage} <span className="text-amber-400">*</span>
               </label>
-              <select
-                required
+              <SearchableSelect
+                disabled={filteredKarigars.length === 0}
                 value={selectedKarigarId}
-                onChange={(e) => setSelectedKarigarId(e.target.value)}
+                onChange={setSelectedKarigarId}
+                placeholder={filteredKarigars.length ? 'Select a stage specialist...' : `No karigars assigned to ${selectedOption?.stage ?? 'this stage'}`}
+                searchPlaceholder="Search karigars…"
                 className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-sm focus:border-amber-500 outline-none"
-              >
-                <option value="">Select a Karigar...</option>
-                {filteredKarigars.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.name} ({k.phone}) &bull; Specialties: {k.specialtyStages.join(', ')}
-                  </option>
-                ))}
-              </select>
+                options={filteredKarigars.map((k) => ({
+                  value: k.id,
+                  label: `${k.name}${k.phone ? ` (${k.phone})` : ''} • Specialties: ${k.specialtyStages.join(', ')}`,
+                }))}
+              />
               <p className="text-[11px] text-neutral-400">
-                A fresh QR code will be generated containing this stage, karigar, and date.
+                Only karigars assigned to {selectedOption?.stage} are listed. A fresh QR code will be generated with this stage, karigar, and date.
               </p>
+
+              <div className="pt-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                  Slip Amount (₹) <span className="text-amber-400">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={jobWorkAmount}
+                  onChange={(event) => setJobWorkAmount(event.target.value)}
+                  placeholder="Job-work price printed on this slip"
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 font-mono text-sm focus:border-amber-500 outline-none"
+                />
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  This saved amount will appear on the slip and in the karigar ledger.
+                </p>
+              </div>
             </div>
           )}
 
@@ -257,15 +258,19 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
+              disabled={isSaving}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-sans shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-sans shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-wait disabled:active:scale-100"
             >
-              {isMovingToReadyStock ? (
+              {isSaving ? (
+                <span>Saving...</span>
+              ) : isMovingToReadyStock ? (
                 <>
                   <ArrowRight className="w-4 h-4" />
                   <span>Move to Ready Stock</span>

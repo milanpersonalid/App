@@ -5,13 +5,13 @@ import {
   Layers,
   Sparkles,
   Archive,
+  ReceiptText,
   Camera,
   PlusCircle,
-  RotateCcw,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-export type ActiveTab = 'dashboard' | 'designs' | 'lots' | 'ready_stock';
+export type ActiveTab = 'dashboard' | 'designs' | 'lots' | 'ledger' | 'ready_stock';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -28,7 +28,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenCreateDesign,
   onOpenCreateLot,
 }) => {
-  const { lots, getReadyStockSummary, resetToDefaultData } = useApp();
+  const { lots, getReadyStockSummary } = useApp();
 
   const awaitingEntryCount = lots.filter((l) => l.status === 'arrived_awaiting_entry').length;
   const stageCompleteCount = lots.filter((l) => l.status === 'stage_complete').length;
@@ -49,6 +49,7 @@ export const Navigation: React.FC<NavigationProps> = ({
       icon: <Archive className="w-4 h-4" />,
       badge: lowStockCount || undefined,
     },
+    { id: 'ledger', label: 'Karigar Ledger', icon: <ReceiptText className="w-4 h-4" /> },
   ];
 
   return (
@@ -93,18 +94,6 @@ export const Navigation: React.FC<NavigationProps> = ({
             <span className="hidden md:inline">Create Design</span>
           </button>
 
-          {/* Reset Demo Data Helper */}
-          <button
-            onClick={() => {
-              if (window.confirm('Reset app data to default production lot demo?')) {
-                resetToDefaultData();
-              }
-            }}
-            title="Reset to initial factory sample lot data"
-            className="p-2 rounded-xl text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/80 transition"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 

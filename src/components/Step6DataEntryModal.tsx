@@ -2,11 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Lot, Design } from '../types';
 import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
+import { SearchableSelect } from './SearchableSelect';
 import { AlertTriangle, CheckCircle2, Scale, Calculator, RefreshCw, X, GitBranch } from 'lucide-react';
 import {
-  getStageAvgWeight,
+  getStageWeightKey,
   getStageWeightLabel,
-  isWeightEstimationApplicable,
+  isStageRulerSet,
   getDefaultCalibrationTarget,
   CalibrationTarget,
 } from '../utils/stageWeights';
@@ -39,14 +40,14 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   const piecesSent = currentRecord?.piecesSent ?? lot.initialPieces ?? 0;
 
   // Specific stage ruler check:
-  // When a lot reaches Chhol, check whether the design's ruler for the currently selected branch
-  // (plainAvgWeightPerPiece for Plain, or goldAvgWeightPerPiece for Gold) is already set (> 0).
-  const branchRuler = isChholStage
-    ? (effectiveBranch === 'gold' ? design.goldAvgWeightPerPiece : design.plainAvgWeightPerPiece)
-    : getStageAvgWeight(design, lot.currentStage, effectiveBranch);
-
-  const isRulerSet = typeof branchRuler === 'number' && !isNaN(branchRuler) && branchRuler > 0;
-  const isChholFirstTime = isChholStage && !isRulerSet;
+  // Chhol branch affects routing only; all post-casting stages share the metal ruler.
+  const rulerKey = getStageWeightKey(lot.currentStage, effectiveBranch);
+  const branchRuler = Number(design[rulerKey]) || 0;
+  const isRulerSet = isStageRulerSet(design, lot.currentStage, effectiveBranch);
+  // Calibrate on the first visited stage that uses a missing ruler. This matters when
+  // production skips Casting and first reaches the shared metal-ruler stages at Buff,
+  // Zabora, or Dull. Wax is calibrated during Create Lot's receive flow.
+  const isFirstTimeCalibration = !isRulerSet && lot.currentStage !== 'Wax';
   const stageWeightLabel = getStageWeightLabel(lot.currentStage, effectiveBranch);
 
   // Step 6 Inputs
@@ -54,7 +55,6 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   const [weightReceivedInput, setWeightReceivedInput] = useState<string>('');
   // 2. Estimated pieces (auto-populated from weight ÷ ruler, but editable manually as a DB column)
   const [estimatedPiecesInput, setEstimatedPiecesInput] = useState<string>('');
-  const [isEstimatedPiecesManual, setIsEstimatedPiecesManual] = useState<boolean>(false);
   // 3. Karigar's stated pieces (from physical slip)
   const [statedPiecesInput, setStatedPiecesInput] = useState<string>('');
   // 5. Rejected pieces (manual entry)
@@ -80,17 +80,17 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
   }, [actualCountedWeight, actualCountedPieces]);
 
   // Active ruler used to automatically estimate the piece count:
-  // - If first time at Chhol: derived from the mandatory sample entries
+  // - If the stage's ruler is missing: derived from the mandatory sample entries
   // - If existing ruler exists: uses branchRuler (or optional recalibrated ruler if toggled)
   const activeRuler = useMemo(() => {
-    if (isChholFirstTime) {
+    if (isFirstTimeCalibration) {
       return calculatedRecalibratedWeight || 0;
     }
     if (enableRecalibration && calculatedRecalibratedWeight) {
       return calculatedRecalibratedWeight;
     }
     return isRulerSet ? (branchRuler as number) : 0;
-  }, [isChholFirstTime, calculatedRecalibratedWeight, enableRecalibration, isRulerSet, branchRuler]);
+  }, [isFirstTimeCalibration, calculatedRecalibratedWeight, enableRecalibration, isRulerSet, branchRuler]);
 
   // Calculations
   const weightReceived = parseFloat(weightReceivedInput) || 0;
@@ -103,33 +103,16 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
     return Math.round(weightReceived / activeRuler);
   }, [weightReceived, activeRuler]);
 
-  // Automatically populate estimatedPiecesInput when calculatedEstimatedPieces changes,
-  // unless the admin has manually edited this value
+  // Piece totals are always derived from weight and the active sample/stage ruler.
   useEffect(() => {
-    if (!isEstimatedPiecesManual) {
-      if (calculatedEstimatedPieces > 0) {
-        setEstimatedPiecesInput(String(calculatedEstimatedPieces));
-      } else if (weightReceived <= 0) {
-        setEstimatedPiecesInput('');
-      }
-    }
-  }, [calculatedEstimatedPieces, isEstimatedPiecesManual, weightReceived]);
-
-  const handleResetEstimatedToAuto = () => {
-    setIsEstimatedPiecesManual(false);
     if (calculatedEstimatedPieces > 0) {
       setEstimatedPiecesInput(String(calculatedEstimatedPieces));
-    } else {
+    } else if (weightReceived <= 0 || activeRuler <= 0) {
       setEstimatedPiecesInput('');
     }
-  };
+  }, [calculatedEstimatedPieces, weightReceived, activeRuler]);
 
-  // Effective estimated pieces: prioritizes user manual entry, fallbacks to auto-calculated
-  const estimatedPieces = useMemo(() => {
-    const parsed = parseInt(estimatedPiecesInput, 10);
-    if (!isNaN(parsed) && parsed >= 0) return parsed;
-    return calculatedEstimatedPieces > 0 ? calculatedEstimatedPieces : 0;
-  }, [estimatedPiecesInput, calculatedEstimatedPieces]);
+  const estimatedPieces = calculatedEstimatedPieces;
 
   // Discrepancy warning logic: compares weight-estimated pieces vs karigar stated pieces
   const discrepancy = useMemo(() => {
@@ -200,7 +183,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
     return Number(((stageLostPieces / piecesSent) * 100).toFixed(1));
   }, [hasStatedCount, stageLostPieces, piecesSent]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (weightReceived <= 0) {
       setError('Please enter a valid weight received in grams.');
@@ -211,11 +194,11 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
       return;
     }
 
-    // First-time Chhol validation: Mandatory sample calibration
-    if (isChholFirstTime) {
+    // The first visited stage that needs an unset ruler requires a representative sample.
+    if (isFirstTimeCalibration) {
       if (!calculatedRecalibratedWeight || calculatedRecalibratedWeight <= 0) {
         setError(
-          `First-time calibration is mandatory for the ${effectiveBranch === 'gold' ? 'Gold' : 'Plain'} branch at Chhol. Please enter sample counted weight and pieces.`
+          `First-time ${lot.currentStage} calibration is required. Enter both sample weight and sample pieces.`
         );
         return;
       }
@@ -226,17 +209,17 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
       }
     }
 
-    const newRecalibratedWeight = isChholFirstTime
+    const newRecalibratedWeight = isFirstTimeCalibration
       ? calculatedRecalibratedWeight!
       : (enableRecalibration && calculatedRecalibratedWeight ? calculatedRecalibratedWeight : undefined);
 
-    const targetCalibration = isChholFirstTime
-      ? (effectiveBranch === 'gold' ? 'gold' : 'plain')
+    const targetCalibration = isFirstTimeCalibration
+      ? getDefaultCalibrationTarget(lot.currentStage, effectiveBranch)
       : (enableRecalibration ? calibrationTarget : undefined);
 
-    const finalEstimatedPieces = parseInt(estimatedPiecesInput, 10) || (calculatedEstimatedPieces > 0 ? calculatedEstimatedPieces : 0);
+    const finalEstimatedPieces = calculatedEstimatedPieces;
 
-    const res = completeStageDataEntry(lot.id, {
+    const res = await completeStageDataEntry(lot.id, {
       weightReceived,
       estimatedPieces: finalEstimatedPieces,
       statedPieces,
@@ -421,11 +404,13 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                   isBright ? 'text-[#C85235]' : 'text-amber-400'
                 }`}
               >
-                {isChholFirstTime
+                {isFirstTimeCalibration
                   ? calculatedRecalibratedWeight
                     ? `${calculatedRecalibratedWeight.toFixed(4)} g/pc (Sample)`
                     : 'Pending Sample'
-                  : `${(branchRuler || 1.5).toFixed(3)} g/pc`}
+                  : isRulerSet
+                    ? `${branchRuler.toFixed(3)} g/pc`
+                    : 'Not calibrated'}
               </span>
             </div>
           </div>
@@ -496,7 +481,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                   >
                     Weight Received (g) <span className={isBright ? 'text-[#E07A5F]' : 'text-amber-400'}>*</span>
                   </label>
-                  {weightReceived > 0 && activeRuler <= 0 && isChholFirstTime && (
+                  {weightReceived > 0 && activeRuler <= 0 && isFirstTimeCalibration && (
                     <span
                       className={`text-[10px] font-mono font-medium flex items-center gap-1 ${
                         isBright ? 'text-[#C85235]' : 'text-amber-400'
@@ -547,83 +532,22 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                     <Calculator className={`w-3.5 h-3.5 ${isBright ? 'text-[#2A9D8F]' : 'text-emerald-400'}`} />
                     Estimated Pieces (Database Column)
                   </label>
-                  <div className="flex items-center gap-1.5">
-                    {isEstimatedPiecesManual ? (
-                      <span
-                        className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                          isBright
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                            : 'bg-amber-950/60 text-amber-300 border border-amber-800/60'
-                        }`}
-                      >
-                        Manual Edit
-                      </span>
-                    ) : (
-                      <span
-                        className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded ${
-                          estimatedPieces > 0
-                            ? isBright
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/60'
-                            : isBright
-                              ? 'bg-slate-100 text-slate-500'
-                              : 'bg-neutral-800 text-neutral-400'
-                        }`}
-                      >
-                        Auto-populated
-                      </span>
-                    )}
-
-                    {isEstimatedPiecesManual && calculatedEstimatedPieces > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleResetEstimatedToAuto}
-                        title={`Reset to auto-calculated formula (${calculatedEstimatedPieces} pcs)`}
-                        className={`text-[10px] font-mono flex items-center gap-1 px-1.5 py-0.5 rounded border transition ${
-                          isBright
-                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-                            : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-700'
-                        }`}
-                      >
-                        <RefreshCw className="w-2.5 h-2.5" />
-                        Auto ({calculatedEstimatedPieces})
-                      </button>
-                    )}
-                  </div>
+                  <span className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded ${estimatedPieces > 0 ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/60' : 'bg-neutral-800 text-neutral-400'}`}>
+                    Auto-populated
+                  </span>
                 </div>
                 <div className="relative">
                   <input
                     id="estimated-pieces-input"
                     type="number"
                     min="0"
-                    placeholder={activeRuler > 0 ? "e.g. 200" : "Awaiting ruler or enter manually"}
+                    placeholder={activeRuler > 0 ? 'Calculated from weight' : 'Enter sample to establish ruler'}
                     value={estimatedPiecesInput}
-                    onChange={(e) => {
-                      setEstimatedPiecesInput(e.target.value);
-                      setIsEstimatedPiecesManual(true);
-                    }}
-                    className={`w-full px-3.5 py-2 rounded-xl border font-mono text-sm outline-none transition font-semibold ${
-                      isEstimatedPiecesManual
-                        ? isBright
-                          ? 'bg-[#FFFBEB] border-[#FCD34D] text-[#92400E] focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs'
-                          : 'bg-amber-950/20 border-amber-700/60 text-amber-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs'
-                        : estimatedPieces > 0
-                          ? isBright
-                            ? 'bg-[#F0FDF4] border-[#86EFAC] text-[#166534] focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-xs'
-                            : 'bg-emerald-950/30 border-emerald-600/60 text-emerald-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-xs'
-                          : isBright
-                            ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A] placeholder-[#A1A1AA] focus:border-[#E07A5F] focus:ring-1 focus:ring-[#E07A5F]'
-                            : 'bg-neutral-950 border-neutral-700/80 text-neutral-100 placeholder-neutral-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500'
-                    }`}
+                    readOnly
+                    className={`w-full px-3.5 py-2 rounded-xl border font-mono text-sm outline-none transition font-semibold ${estimatedPieces > 0 ? isBright ? 'bg-[#F0FDF4] border-[#86EFAC] text-[#166534]' : 'bg-emerald-950/30 border-emerald-600/60 text-emerald-300' : isBright ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]' : 'bg-neutral-950 border-neutral-700/80 text-neutral-100'}`}
                   />
                   <span
-                    className={`absolute right-3 top-2 text-xs font-mono font-medium ${
-                      isEstimatedPiecesManual
-                        ? isBright ? 'text-[#92400E]' : 'text-amber-300'
-                        : estimatedPieces > 0
-                          ? isBright ? 'text-[#166534]' : 'text-emerald-400'
-                          : isBright ? 'text-[#71717A]' : 'text-neutral-500'
-                    }`}
+                    className={`absolute right-3 top-2 text-xs font-mono font-medium ${estimatedPieces > 0 ? isBright ? 'text-[#166534]' : 'text-emerald-400' : isBright ? 'text-[#71717A]' : 'text-neutral-500'}`}
                   >
                     pcs
                   </span>
@@ -635,13 +559,10 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                         ? `Formula: ${weightReceived}g ÷ ${activeRuler.toFixed(3)}g/pc = ${calculatedEstimatedPieces} pcs`
                         : `Formula: Weight Received ÷ ${activeRuler.toFixed(3)}g/pc`}
                     </span>
-                    <span className={isBright ? 'text-slate-500' : 'text-neutral-400'}>
-                      {isEstimatedPiecesManual ? 'Manual override active' : 'Saved to database'}
-                    </span>
                   </div>
                 ) : (
                   <p className={`text-[10px] mt-1 ${isBright ? 'text-amber-700' : 'text-amber-400'}`}>
-                    Enter manual pieces or calibrate sample below to establish ruler
+                    Enter a small representative sample below to establish ruler
                   </p>
                 )}
               </div>
@@ -916,8 +837,8 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
           )}
 
           {/* Calibration / Recalibration Section */}
-          {isChholFirstTime ? (
-            /* First-Time at Chhol for this branch: MANDATORY CALIBRATION REQUIRED */
+          {isFirstTimeCalibration ? (
+            /* First-time stage/branch ruler: mandatory representative sample */
             <div
               className={`p-4 rounded-xl border space-y-3 transition-colors ${
                 isBright
@@ -929,7 +850,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                 <div className="flex items-center gap-2">
                   <Scale className={`w-4 h-4 flex-shrink-0 ${isBright ? 'text-[#C85235]' : 'text-amber-400'}`} />
                   <h4 className={`text-xs font-bold ${isBright ? 'text-[#78350F]' : 'text-amber-300'}`}>
-                    First-Time {effectiveBranch === 'gold' ? 'Gold' : 'Plain'} Branch Calibration (Required)
+                    First-Time {lot.currentStage} Calibration (Required)
                   </h4>
                 </div>
                 <span
@@ -942,15 +863,11 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
               </div>
 
               <p className={`text-xs leading-relaxed ${isBright ? 'text-[#52525B]' : 'text-neutral-300'}`}>
-                This design does not have an established ruler for the{' '}
-                <strong className={isBright ? 'text-[#27272A]' : 'text-white'}>
-                  {effectiveBranch === 'gold' ? 'Gold' : 'Plain'}
-                </strong>{' '}
-                branch yet. Material was filed off during Chhol, so a brand-new weight-per-piece ruler (
+                This design does not have an established {stageWeightLabel} ruler yet. Weigh and count a small representative sample — never the entire lot — to establish it (
                 <code className={`font-mono text-[11px] font-semibold px-1 py-0.5 rounded ${isBright ? 'bg-white text-[#C85235]' : 'bg-neutral-900 text-amber-300'}`}>
-                  {effectiveBranch === 'gold' ? 'goldAvgWeightPerPiece' : 'plainAvgWeightPerPiece'}
+                  {rulerKey}
                 </code>
-                ) must be established before proceeding. Weigh and count a small sample (e.g. 50–100 pieces) below:
+                ) before estimating the lot’s pieces from its total weight:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -1011,7 +928,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                   }`}
                 >
                   <span>
-                    Established {effectiveBranch.toUpperCase()} Ruler: <strong>{calculatedRecalibratedWeight} g/pc</strong>
+                    Established {stageWeightLabel} Ruler: <strong>{calculatedRecalibratedWeight} g/pc</strong>
                   </span>
                   {weightReceived > 0 && (
                     <span className="font-sans font-semibold">
@@ -1049,20 +966,20 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
                     <label className={`block text-[10px] mb-1 font-semibold ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
                       Target Calibration Point:
                     </label>
-                    <select
+                    <SearchableSelect
                       value={calibrationTarget}
-                      onChange={(e) => setCalibrationTarget(e.target.value as CalibrationTarget)}
+                      onChange={(value) => setCalibrationTarget(value as CalibrationTarget)}
+                      searchPlaceholder="Search rulers…"
                       className={`w-full px-2.5 py-1.5 rounded-lg border font-mono text-xs outline-none ${
                         isBright
                           ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
                           : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                       }`}
-                    >
-                      <option value="wax">Wax Stage Baseline (waxAvgWeightPerPiece)</option>
-                      <option value="metal">Metal / Post-Casting Baseline (metalAvgWeightPerPiece)</option>
-                      <option value="plain">Post-Chhol Plain Baseline (plainAvgWeightPerPiece)</option>
-                      <option value="gold">Post-Chhol Gold Baseline (goldAvgWeightPerPiece)</option>
-                    </select>
+                      options={[
+                        { value: 'wax', label: 'Wax Stage Baseline (waxAvgWeightPerPiece)' },
+                        { value: 'metal', label: 'Metal / Post-Casting Baseline (metalAvgWeightPerPiece)' },
+                      ]}
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
@@ -1138,7 +1055,7 @@ export const Step6DataEntryModal: React.FC<Step6DataEntryModalProps> = ({
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
-              Complete Stage &amp; Assign Artisan &rarr;
+              Complete Stage &amp; Assign Karigar &rarr;
             </button>
           </div>
         </form>

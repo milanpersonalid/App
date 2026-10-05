@@ -7,31 +7,43 @@ import {
   User,
   Eye,
   EyeOff,
+  UserPlus,
 } from 'lucide-react';
-import { useAuthAndTheme, DEFAULT_USER } from '../context/AuthAndThemeContext';
+import { useAuthAndTheme } from '../context/AuthAndThemeContext';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { AppLogoIcon } from './AppLogoIcon';
 
 export const LoginScreen: React.FC = () => {
-  const { login, theme, toggleTheme } = useAuthAndTheme();
+  const { login, requestAccess, theme, toggleTheme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
-  const [emailInput, setEmailInput] = useState('mkajudiya001@gmail.com');
-  const [pinInput, setPinInput] = useState('1234');
+  const [emailInput, setEmailInput] = useState('');
+  const [pinInput, setPinInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [mode, setMode] = useState<'login' | 'request'>('login');
+  const [nameInput, setNameInput] = useState('');
 
-  const handleCustomLogin = (e: React.FormEvent) => {
+  const handleCustomLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      login({
-        ...DEFAULT_USER,
-        email: emailInput || DEFAULT_USER.email,
-        name: emailInput.includes('rajesh') ? 'Rajesh Soni' : 'Milan Ajudiya',
-        initials: emailInput.includes('rajesh') ? 'RS' : 'MA',
-      });
+    setError('');
+    setSuccessMessage('');
+    try {
+      if (mode === 'request') {
+        const message = await requestAccess(nameInput, emailInput, pinInput);
+        setSuccessMessage(message);
+        setPinInput('');
+      } else {
+        await login(emailInput.trim(), pinInput);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in.');
+    } finally {
       setIsLoading(false);
-    }, 300);
+    }
   };
 
   return (
@@ -81,8 +93,57 @@ export const LoginScreen: React.FC = () => {
           </h1>
         </div>
 
-        {/* Manual Login Form */}
+        {!isSupabaseConfigured ? (
+          <div
+            role="status"
+            className={`space-y-3 rounded-2xl border p-4 text-sm ${
+              isBright
+                ? 'border-amber-300 bg-amber-50 text-stone-800'
+                : 'border-amber-500/40 bg-amber-500/10 text-stone-100'
+            }`}
+          >
+            <h2 className="font-bold">Backend setup required</h2>
+            <p className="text-xs leading-relaxed">
+              This app needs a Supabase project before anyone can sign in or load production data.
+            </p>
+            <ol className="list-decimal space-y-1 pl-4 text-xs leading-relaxed">
+              <li>Create a project in the Supabase Dashboard.</li>
+              <li>Run the SQL in <code>supabase/migrations/202609250001_production_data.sql</code>.</li>
+              <li>Add the project URL and publishable key to a <code>.env</code> file in the app folder.</li>
+              <li>Restart the app server, then create and sign in with a Supabase user.</li>
+            </ol>
+            <pre className={`overflow-x-auto rounded-lg p-2 text-[10px] leading-relaxed ${
+              isBright ? 'bg-white text-stone-700' : 'bg-neutral-950 text-stone-300'
+            }`}>{'VITE_SUPABASE_URL="https://YOUR_PROJECT.supabase.co"\nVITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_..."'}</pre>
+            <a
+              href="https://supabase.com/dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-xs font-bold text-amber-500 underline underline-offset-2"
+            >
+              Open Supabase Dashboard
+            </a>
+          </div>
+        ) : (
         <form onSubmit={handleCustomLogin} className="space-y-4">
+          {mode === 'request' && (
+            <div>
+              <label className={`text-[10px] font-semibold uppercase tracking-wider block mb-1 ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
+                Your Name
+              </label>
+              <div className="relative">
+                <User className={`w-4 h-4 absolute left-3 top-2.5 ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`} />
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Enter your name..."
+                  className={`w-full pl-9 pr-3 py-2 rounded-xl border text-xs focus:border-[#E07A5F] outline-none ${isBright ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]' : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'}`}
+                  required
+                />
+              </div>
+            </div>
+          )}
           <div>
             <label className={`text-[10px] font-semibold uppercase tracking-wider block mb-1 ${isBright ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>
               Email / User ID
@@ -142,15 +203,40 @@ export const LoginScreen: React.FC = () => {
             </div>
           </div>
 
+          {error && (
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          {successMessage && (
+            <p className="text-xs text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+              {successMessage}
+            </p>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
             className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#E07A5F] to-[#C86349] hover:from-[#E8998D] hover:to-[#E07A5F] text-white font-bold text-xs shadow-lg shadow-[#E07A5F]/25 active:scale-95 transition flex items-center justify-center gap-2"
           >
-            <KeyRound className="w-4 h-4" />
-            <span>{isLoading ? 'Signing In...' : 'Sign In'}</span>
+            {mode === 'request' ? <UserPlus className="w-4 h-4" /> : <KeyRound className="w-4 h-4" />}
+            <span>{isLoading ? (mode === 'request' ? 'Submitting...' : 'Signing In...') : (mode === 'request' ? 'Request Access' : 'Sign In')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode((current) => current === 'login' ? 'request' : 'login');
+              setError('');
+              setSuccessMessage('');
+            }}
+            className={`w-full text-xs font-semibold ${isBright ? 'text-[#C86349]' : 'text-[#E8998D]'}`}
+          >
+            {mode === 'login' ? 'New user? Request access' : 'Already approved? Sign in'}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

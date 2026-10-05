@@ -369,7 +369,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         isBright ? 'text-[#71717A]' : 'text-neutral-400'
                       }`}
                     >
-                      Loss: {lastRec?.weightLoss || 0}g ({lastRec?.lossPercentage || 0}%)
+                      {lot.currentStage === 'Wax'
+                        ? `Wax receipt complete${lastRec?.orderedQuantity != null
+                          ? ` · ordered ${lastRec.orderedQuantity}, received est. ${lastRec.estimatedPieces ?? lot.initialPieces}`
+                          : ''} · ready to send to Casting`
+                        : `Loss: ${lastRec?.weightLoss || 0}g (${lastRec?.lossPercentage || 0}%)`}
                     </div>
                   </div>
 

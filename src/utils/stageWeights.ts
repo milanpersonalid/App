@@ -2,38 +2,33 @@ import { Stage, BranchType, Design } from '../types';
 
 export type StageWeightKey =
   | 'waxAvgWeightPerPiece'
-  | 'metalAvgWeightPerPiece'
-  | 'plainAvgWeightPerPiece'
-  | 'goldAvgWeightPerPiece';
+  | 'metalAvgWeightPerPiece';
 
-export type CalibrationTarget = 'wax' | 'metal' | 'plain' | 'gold';
+export type CalibrationTarget = 'wax' | 'metal';
 
 /**
  * Returns which weight-per-piece field to use for estimating pieces / reference at a given stage.
  *
  * Stage Table:
  * - Wax: waxAvgWeightPerPiece
- * - Casting: waxAvgWeightPerPiece (still wax-equivalent going in; establishes metalAvgWeightPerPiece upon completion)
+ * - Casting: metalAvgWeightPerPiece
  * - Buff, Zabora, Dull: metalAvgWeightPerPiece
- * - Chhol: Does NOT estimate from weight; but plain/gold weights are established here
- * - Plating: goldAvgWeightPerPiece (Gold branch only)
- * - Ready Stock: plainAvgWeightPerPiece or goldAvgWeightPerPiece depending on branch
+ * - Chhol and Plating use the shared metal ruler; the branch affects routing, not calibration.
+ * - Ready Stock uses the same metal ruler for piece estimation.
  */
 export function getStageWeightKey(stage: Stage, branch: BranchType = 'none'): StageWeightKey {
   switch (stage) {
     case 'Wax':
-    case 'Casting':
       return 'waxAvgWeightPerPiece';
+    case 'Casting':
+      return 'metalAvgWeightPerPiece';
     case 'Buff':
     case 'Zabora':
     case 'Dull':
-      return 'metalAvgWeightPerPiece';
     case 'Chhol':
-      return branch === 'gold' ? 'goldAvgWeightPerPiece' : 'plainAvgWeightPerPiece';
     case 'Plating':
-      return 'goldAvgWeightPerPiece';
     case 'Ready Stock':
-      return branch === 'gold' ? 'goldAvgWeightPerPiece' : 'plainAvgWeightPerPiece';
+      return 'metalAvgWeightPerPiece';
     default:
       return 'metalAvgWeightPerPiece';
   }
@@ -47,17 +42,17 @@ export function getStageWeightLabel(stage: Stage, branch: BranchType = 'none'): 
     case 'Wax':
       return 'Wax Avg Wt';
     case 'Casting':
-      return 'Wax Baseline Wt';
+      return 'Metal Avg Wt';
     case 'Buff':
     case 'Zabora':
     case 'Dull':
       return 'Metal Avg Wt';
     case 'Chhol':
-      return branch === 'gold' ? 'Gold Branch Wt' : 'Plain Branch Wt';
+      return 'Metal Avg Wt';
     case 'Plating':
-      return 'Gold Avg Wt';
+      return 'Metal Avg Wt';
     case 'Ready Stock':
-      return branch === 'gold' ? 'Ready Gold Wt' : 'Ready Plain Wt';
+      return 'Metal Avg Wt';
     default:
       return 'Avg Wt';
   }
@@ -115,8 +110,7 @@ export function isWeightEstimationApplicable(_stage?: Stage): boolean {
  * - Wax -> wax
  * - Casting -> metal (establishes metal average for the first time or recalibrates)
  * - Buff, Zabora, Dull -> metal
- * - Chhol -> plain or gold depending on chosen branch
- * - Plating -> gold
+ * - Chhol and Plating -> metal
  */
 export function getDefaultCalibrationTarget(
   stage: Stage,
@@ -131,10 +125,8 @@ export function getDefaultCalibrationTarget(
     case 'Zabora':
     case 'Dull':
       return 'metal';
-    case 'Chhol':
-      return branch === 'gold' ? 'gold' : 'plain';
     case 'Plating':
-      return 'gold';
+    case 'Chhol':
     default:
       return 'metal';
   }

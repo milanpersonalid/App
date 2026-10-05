@@ -31,7 +31,13 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
   const [editingDesignId, setEditingDesignId] = useState<string | null>(null);
   const [newThreshold, setNewThreshold] = useState<string>('');
 
-  const stockItems: ReadyStockItem[] = getReadyStockSummary();
+  // The summary includes every design (including designs with no completed lots)
+  // for low-stock reporting. The Stock screen should only list designs that have
+  // actually reached Ready Stock; in-progress warehouse lots are not inventory.
+  const readyDesignIds = new Set(
+    lots.filter((lot) => lot.status === 'ready_stock').map((lot) => lot.designId)
+  );
+  const stockItems: ReadyStockItem[] = getReadyStockSummary().filter((item) => readyDesignIds.has(item.designId));
 
   const filteredItems = stockItems.filter((item) => {
     const matchesSearch =
@@ -45,10 +51,10 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
     return true;
   });
 
-  const handleSaveThreshold = (designId: string) => {
+  const handleSaveThreshold = async (designId: string) => {
     const val = parseInt(newThreshold, 10);
     if (val > 0) {
-      updateLowStockThreshold(designId, val);
+      await updateLowStockThreshold(designId, val);
       setEditingDesignId(null);
     }
   };
@@ -575,4 +581,3 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
     </div>
   );
 };
-

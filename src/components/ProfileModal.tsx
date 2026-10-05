@@ -16,14 +16,16 @@ interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenAdmin: () => void;
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
   onClose,
   onOpenSettings,
+  onOpenAdmin,
 }) => {
-  const { currentUser, logout, updateProfile, theme } = useAuthAndTheme();
+  const { currentUser, isAdmin, logout, updateProfile, theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
   const [isEditing, setIsEditing] = useState(false);
@@ -33,9 +35,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   if (!isOpen || !currentUser) return null;
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
+    await updateProfile({
       name: nameInput.trim() || currentUser.name,
       phone: phoneInput.trim() || currentUser.phone,
     });
@@ -234,13 +236,31 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <KeyRound className="w-3.5 h-3.5 text-[#E07A5F]" /> Foundry Access
               </span>
               <span className="text-[#7A9B76] font-semibold text-[11px] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#7A9B76]" /> Full Admin Auth
+                <span className="w-1.5 h-1.5 rounded-full bg-[#7A9B76]" /> {isAdmin ? 'Approved Administrator' : 'Approved User'}
               </span>
             </div>
           </div>
 
           {/* Bottom Actions: Settings & Logout */}
           <div className={`mt-5 pt-3 border-t flex flex-col gap-2 ${isBright ? 'border-[#D4D4D8]' : 'border-[#3F3F46]'}`}>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAdmin();
+                }}
+                className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition active:scale-[0.99] ${
+                  isBright
+                    ? 'bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200'
+                    : 'bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border-violet-500/30'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Open Admin Dashboard</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {

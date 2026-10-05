@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { Design, CalibrationTarget } from '../../types';
 import { generateBarcodeSvg } from '../../utils/qrBarcode';
+import { SearchableSelect } from '../SearchableSelect';
 import {
   Sparkles,
   Plus,
@@ -13,6 +14,7 @@ import {
   AlertTriangle,
   Barcode,
   Check,
+  X,
 } from 'lucide-react';
 
 interface DesignsViewProps {
@@ -28,6 +30,7 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
   const [searchQuery, setSearchQuery] = useState('');
+  const [previewDesign, setPreviewDesign] = useState<Design | null>(null);
 
   // Inline recalibration state
   const [recalibratingDesignId, setRecalibratingDesignId] = useState<string | null>(null);
@@ -46,22 +49,22 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
       d.barcode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSaveRecalibration = (designId: string) => {
+  const handleSaveRecalibration = async (designId: string) => {
     const w = parseFloat(recalWeight);
     const p = parseInt(recalPieces, 10);
     if (w > 0 && p > 0) {
       const newAvg = w / p;
-      recalibrateDesign(designId, newAvg, recalTarget);
+      await recalibrateDesign(designId, newAvg, recalTarget);
       setRecalibratingDesignId(null);
       setRecalWeight('');
       setRecalPieces('');
     }
   };
 
-  const handleSaveThreshold = (designId: string) => {
+  const handleSaveThreshold = async (designId: string) => {
     const val = parseInt(newThresholdValue, 10);
     if (val > 0) {
-      updateLowStockThreshold(designId, val);
+      await updateLowStockThreshold(designId, val);
       setEditingThresholdId(null);
     }
   };
@@ -100,7 +103,7 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
       {/* Designs Mobile List */}
       <div className="flex flex-col gap-3.5">
         {filteredDesigns.map((design) => {
-          const barcodeSvg = generateBarcodeSvg(design.barcode, 20);
+          const barcodeSvg = generateBarcodeSvg(design.barcode, 36);
 
           const isRecalibrating = recalibratingDesignId === design.id;
           const isEditingThreshold = editingThresholdId === design.id;
@@ -117,13 +120,21 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
               <div>
                 {/* Header: Photo & Title */}
                 <div className="flex items-start gap-3 mb-2.5">
-                  <img
-                    src={design.photoUrl}
-                    alt={design.name}
-                    className={`w-16 h-16 rounded-xl object-cover border flex-shrink-0 ${
-                      isBright ? 'border-[#E2E8F0]' : 'border-neutral-700'
-                    }`}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDesign(design)}
+                    className="flex-shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    aria-label={`View larger image of ${design.name}`}
+                    title="View image"
+                  >
+                    <img
+                      src={design.photoUrl}
+                      alt={design.name}
+                      className={`w-16 h-16 rounded-xl object-cover border ${
+                        isBright ? 'border-[#E2E8F0]' : 'border-neutral-700'
+                      }`}
+                    />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono text-amber-500 font-semibold">
@@ -155,7 +166,7 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className={`text-[10px] font-bold uppercase tracking-wider ${isBright ? 'text-slate-600' : 'text-neutral-400'}`}>
-                      Stage Weight Baselines (4 Calibration Tiers)
+                      Stage Weight Baselines (Wax + Metal)
                     </span>
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
@@ -195,13 +206,15 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-dashed border-neutral-700/40">
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-dashed border-neutral-700/40">
                     <div>
                       <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
                         Wax Stage
                       </span>
                       <span className="font-mono font-bold text-xs text-amber-500">
-                        {(design.waxAvgWeightPerPiece ?? 0.2).toFixed(4)} g
+                        {design.waxAvgWeightPerPiece > 0
+                          ? `${design.waxAvgWeightPerPiece.toFixed(4)} g`
+                          : 'Not calibrated'}
                       </span>
                     </div>
 
@@ -210,43 +223,12 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                         Metal / Post-Cast
                       </span>
                       <span className="font-mono font-bold text-xs text-blue-400">
-                        {(design.metalAvgWeightPerPiece ?? 1.5).toFixed(4)} g
+                        {design.metalAvgWeightPerPiece > 0
+                          ? `${design.metalAvgWeightPerPiece.toFixed(4)} g`
+                          : 'Not calibrated'}
                       </span>
                     </div>
 
-                    <div>
-                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        Post-Chhol Plain
-                      </span>
-                      <span
-                        className={`font-mono font-bold text-xs ${
-                          design.plainAvgWeightPerPiece && design.plainAvgWeightPerPiece > 0
-                            ? 'text-emerald-500'
-                            : isBright ? 'text-[#C85235] text-[11px]' : 'text-amber-400/90 text-[11px]'
-                        }`}
-                      >
-                        {design.plainAvgWeightPerPiece && design.plainAvgWeightPerPiece > 0
-                          ? `${design.plainAvgWeightPerPiece.toFixed(4)} g`
-                          : 'Pending Chhol'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        Post-Chhol Gold
-                      </span>
-                      <span
-                        className={`font-mono font-bold text-xs ${
-                          design.goldAvgWeightPerPiece && design.goldAvgWeightPerPiece > 0
-                            ? 'text-amber-400'
-                            : isBright ? 'text-[#C85235] text-[11px]' : 'text-amber-400/90 text-[11px]'
-                        }`}
-                      >
-                        {design.goldAvgWeightPerPiece && design.goldAvgWeightPerPiece > 0
-                          ? `${design.goldAvgWeightPerPiece.toFixed(4)} g`
-                          : 'Pending Chhol'}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
@@ -267,25 +249,24 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                       <label className="block text-[10px] text-neutral-400 mb-1">
                         Select Target Calibration Tier:
                       </label>
-                      <select
+                      <SearchableSelect
                         value={recalTarget}
-                        onChange={(e) => {
-                          const target = e.target.value as CalibrationTarget;
+                        onChange={(value) => {
+                          const target = value as CalibrationTarget;
                           setRecalTarget(target);
-                          let val = design.waxAvgWeightPerPiece ?? 0.2;
-                          if (target === 'metal') val = design.metalAvgWeightPerPiece ?? 1.5;
-                          if (target === 'plain') val = design.plainAvgWeightPerPiece ?? 1.4;
-                          if (target === 'gold') val = design.goldAvgWeightPerPiece ?? 1.45;
-                          setRecalWeight(val.toFixed(4));
-                          setRecalPieces('1');
+                          const val = target === 'wax'
+                            ? design.waxAvgWeightPerPiece
+                            : design.metalAvgWeightPerPiece;
+                          setRecalWeight(val > 0 ? val.toFixed(4) : '');
+                          setRecalPieces(val > 0 ? '1' : '');
                         }}
+                        searchPlaceholder="Search rulers…"
                         className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-700 text-xs font-mono text-neutral-100 outline-none"
-                      >
-                        <option value="wax">Wax Stage Baseline (waxAvgWeightPerPiece)</option>
-                        <option value="metal">Metal / Post-Cast Baseline (metalAvgWeightPerPiece)</option>
-                        <option value="plain">Post-Chhol Plain Baseline (plainAvgWeightPerPiece)</option>
-                        <option value="gold">Post-Chhol Gold Baseline (goldAvgWeightPerPiece)</option>
-                      </select>
+                        options={[
+                          { value: 'wax', label: 'Wax Stage Baseline (waxAvgWeightPerPiece)' },
+                          { value: 'metal', label: 'Metal / Post-Cast Baseline (metalAvgWeightPerPiece)' },
+                        ]}
+                      />
                     </div>
 
                     <p className="text-[10px] text-neutral-400">
@@ -328,8 +309,8 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                   onClick={() => {
                     setRecalibratingDesignId(design.id);
                     setRecalTarget('wax');
-                    setRecalWeight((design.waxAvgWeightPerPiece ?? 0.2).toFixed(4));
-                    setRecalPieces('1');
+                    setRecalWeight(design.waxAvgWeightPerPiece > 0 ? design.waxAvgWeightPerPiece.toFixed(4) : '');
+                    setRecalPieces(design.waxAvgWeightPerPiece > 0 ? '1' : '');
                   }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
                     isBright
@@ -353,6 +334,45 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
           );
         })}
       </div>
+
+      {previewDesign && (
+        <div
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPreviewDesign(null);
+          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${previewDesign.name} design image`}
+            className="relative w-full max-w-4xl max-h-[92vh] rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-700 shadow-2xl"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm text-white truncate">{previewDesign.name}</h3>
+                <p className="text-xs text-neutral-400 font-mono">{previewDesign.barcode}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDesign(null)}
+                className="p-2 ml-3 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800"
+                aria-label="Close image preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex items-center justify-center p-3 max-h-[calc(92vh-4.5rem)] overflow-auto">
+              <img
+                src={previewDesign.photoUrl}
+                alt={previewDesign.name}
+                className="max-w-full max-h-[calc(92vh-6rem)] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

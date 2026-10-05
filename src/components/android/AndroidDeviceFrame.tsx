@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { AndroidStatusBar } from './AndroidStatusBar';
 import { AndroidSystemNavBar } from './AndroidSystemNavBar';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
+
+const NativeSystemBars = registerPlugin<{
+  setSystemBars: (options: { bright: boolean }) => Promise<void>;
+}>('NativePrint');
 
 interface AndroidDeviceFrameProps {
   isFramed: boolean;
@@ -23,10 +28,43 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
-  // If not framed (e.g. on real mobile phone), render authentic mobile viewport centered with max-w-[430px]
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    void NativeSystemBars.setSystemBars({ bright: isBright }).catch((error) => {
+      console.warn('Could not update Android system-bar appearance:', error);
+    });
+  }, [isBright]);
+  const nativeSafeAreaStyle: React.CSSProperties = {
+    paddingTop: 'var(--safe-area-inset-top, env(safe-area-inset-top, 0px))',
+    paddingBottom: 'var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))',
+  };
+
+  // The installed app already has Android's real system UI. Do not render the
+  // simulated status/navigation bars or phone chassis inside its WebView.
+  if (Capacitor.isNativePlatform()) {
+    return (
+      <div
+        style={nativeSafeAreaStyle}
+        className={`h-[100dvh] w-full max-w-full overflow-hidden transition-colors duration-200 ${
+          isBright ? 'bg-[#F4F4F6] theme-bright' : 'bg-[#1E1E24]'
+        }`}
+      >
+        <div
+          className={`h-full w-full flex flex-col relative overflow-hidden font-sans ${
+            isBright ? 'text-[#27272A] theme-bright' : 'text-[#F4F4F6]'
+          }`}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Real mobile viewports use the device's own system status/navigation bars.
   if (!isFramed) {
     return (
       <div
+        style={nativeSafeAreaStyle}
         className={`h-screen w-full max-w-full flex items-center justify-center overflow-x-hidden overflow-y-hidden transition-colors duration-200 ${
           isBright ? 'bg-[#E4E4E7] theme-bright' : 'bg-[#18181D]'
         }`}
@@ -36,11 +74,9 @@ export const AndroidDeviceFrame: React.FC<AndroidDeviceFrameProps> = ({
             isBright ? 'bg-[#F4F4F6] text-[#27272A] theme-bright' : 'bg-[#1E1E24] text-[#F4F4F6]'
           }`}
         >
-          <AndroidStatusBar />
           <div className="flex-1 flex flex-col min-h-0 relative overflow-x-hidden overflow-y-hidden w-full max-w-full">
             {children}
           </div>
-          <AndroidSystemNavBar onBack={onBack} onHome={onHome} onRecents={onRecents} />
         </div>
       </div>
     );

@@ -1,4 +1,5 @@
 import { Design, VisualFingerprint } from '../types';
+import { downloadDesignPhoto } from '../services/designImageStorage';
 
 /**
  * Extracts a visual similarity fingerprint from an image element or data URL.
@@ -9,9 +10,9 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const size = 64;
+      const size = 9;
       canvas.width = size;
-      canvas.height = size;
+      canvas.height = 8;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve({
@@ -25,8 +26,26 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
         return;
       }
 
-      ctx.drawImage(img, 0, 0, size, size);
-      const imgData = ctx.getImageData(0, 0, size, size);
+      // Center-crop to a square so different camera aspect ratios compare fairly.
+      const cropSize = Math.min(img.naturalWidth, img.naturalHeight);
+      const cropX = (img.naturalWidth - cropSize) / 2;
+      const cropY = (img.naturalHeight - cropSize) / 2;
+      let imgData: ImageData;
+      try {
+        ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, size, 8);
+        imgData = ctx.getImageData(0, 0, size, 8);
+      } catch (error) {
+        console.warn('Could not read a design image for visual matching:', error);
+        resolve({
+          dominantHue: 0,
+          avgBrightness: 0,
+          edgeDensity: 0,
+          warmth: 0,
+          aspectRatio: 1,
+          hash: 'unavailable',
+        });
+        return;
+      }
       const data = imgData.data;
 
       let totalR = 0, totalG = 0, totalB = 0;
@@ -34,6 +53,7 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
       let goldWarmthCount = 0;
       let edges = 0;
 
+      const grayscale: number[] = [];
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
@@ -43,6 +63,7 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
         totalB += b;
 
         const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+        grayscale.push(brightness);
         totalBrightness += brightness;
 
         // Check for golden/warm brass/yellow hues (typical in ring jewelry)
@@ -59,13 +80,22 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
         }
       }
 
-      const pixelCount = size * size;
+      const pixelCount = size * 8;
       const avgR = totalR / pixelCount;
       const avgG = totalG / pixelCount;
       const avgB = totalB / pixelCount;
       const avgBrightness = totalBrightness / pixelCount;
       const warmth = goldWarmthCount / pixelCount;
       const edgeDensity = Math.min(1, edges / (pixelCount * 0.4));
+
+      // 64-bit difference hash captures the shape/layout rather than only the
+      // overall color, which made the old search rank unrelated rings alike.
+      let perceptualHash = '';
+      for (let y = 0; y < 8; y += 1) {
+        for (let x = 0; x < 8; x += 1) {
+          perceptualHash += grayscale[y * 9 + x] > grayscale[y * 9 + x + 1] ? '1' : '0';
+        }
+      }
 
       // Compute hue (0-360)
       const max = Math.max(avgR, avgG, avgB);
@@ -87,19 +117,18 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
         warmth: Number(warmth.toFixed(3)),
         aspectRatio: img.naturalWidth / (img.naturalHeight || 1),
         hash,
+        perceptualHash,
       });
     };
 
-    img.onerror = () => {
-      resolve({
-        dominantHue: 42,
-        avgBrightness: 160,
-        edgeDensity: 0.5,
-        warmth: 0.6,
-        aspectRatio: 1,
-        hash: 'fallback',
-      });
-    };
+    img.onerror = () => resolve({
+      dominantHue: 0,
+      avgBrightness: 0,
+      edgeDensity: 0,
+      warmth: 0,
+      aspectRatio: 1,
+      hash: 'unavailable',
+    });
 
     img.src = imageSrc;
   });
@@ -109,6 +138,18 @@ export async function extractImageFingerprint(imageSrc: string): Promise<VisualF
  * Calculates a similarity percentage (0% to 99%) between a query photo fingerprint and a design.
  */
 export function calculateSimilarity(fpA: VisualFingerprint, fpB: VisualFingerprint): number {
+  if (fpA.perceptualHash && fpB.perceptualHash) {
+    const length = Math.min(fpA.perceptualHash.length, fpB.perceptualHash.length);
+    if (length === 0) return 0;
+    let differentBits = 0;
+    for (let i = 0; i < length; i += 1) {
+      if (fpA.perceptualHash[i] !== fpB.perceptualHash[i]) differentBits += 1;
+    }
+    const shapeSimilarity = (1 - differentBits / length) * 100;
+    const hueDiff = Math.min(Math.abs(fpA.dominantHue - fpB.dominantHue), 360 - Math.abs(fpA.dominantHue - fpB.dominantHue)) / 180;
+    const colorDistance = hueDiff * 0.4 + Math.abs(fpA.avgBrightness - fpB.avgBrightness) / 255 * 0.3 + Math.abs(fpA.warmth - fpB.warmth) * 0.3;
+    return Number((shapeSimilarity * 0.85 + (1 - colorDistance) * 100 * 0.15).toFixed(1));
+  }
   // Hue distance (circular 0-360)
   const hueDiff = Math.min(Math.abs(fpA.dominantHue - fpB.dominantHue), 360 - Math.abs(fpA.dominantHue - fpB.dominantHue)) / 180;
   // Brightness distance (0-255)
@@ -122,9 +163,7 @@ export function calculateSimilarity(fpA: VisualFingerprint, fpB: VisualFingerpri
   const distance = hueDiff * 0.35 + brightDiff * 0.2 + warmthDiff * 0.25 + edgeDiff * 0.2;
   const rawSimilarity = Math.max(0, 1 - distance);
 
-  // Scale naturally between 45% and 98% for realistic visual similarity feedback
-  const scaledScore = Math.min(98.5, Math.max(42.0, rawSimilarity * 98));
-  return Number(scaledScore.toFixed(1));
+  return Number((rawSimilarity * 100).toFixed(1));
 }
 
 export interface SimilarityResult {
@@ -135,22 +174,32 @@ export interface SimilarityResult {
 /**
  * Returns the top 3 matches ranked by similarity percentage.
  */
-export function findTop3Matches(queryFp: VisualFingerprint, designs: Design[]): SimilarityResult[] {
-  const scored = designs.map((d) => {
-    // If design doesn't have a fingerprint yet, generate a fallback deterministic one from its name & ID
-    const dFp: VisualFingerprint = d.fingerprint || {
-      dominantHue: (d.name.length * 37) % 360,
-      avgBrightness: 140 + (d.id.charCodeAt(0) % 50),
-      edgeDensity: 0.45 + ((d.id.charCodeAt(1) || 60) % 30) / 100,
-      warmth: 0.55 + ((d.name.charCodeAt(0) || 70) % 30) / 100,
-      aspectRatio: 1,
-      hash: d.id,
-    };
+export async function findTop3Matches(queryFp: VisualFingerprint, designs: Design[]): Promise<SimilarityResult[]> {
+  if (!queryFp.perceptualHash || queryFp.hash === 'unavailable') return [];
+  const scored = await Promise.all(designs.map(async (design) => {
+    // Recompute old saved fingerprints from their actual image. Name/ID-based
+    // synthetic fingerprints are deliberately not used as fake matches.
+    let dFp = design.fingerprint?.perceptualHash ? design.fingerprint : undefined;
+    if (!dFp && design.photoStoragePath) {
+      try {
+        const imageBlob = await downloadDesignPhoto(design.photoStoragePath);
+        const imageUrl = URL.createObjectURL(imageBlob);
+        try {
+          dFp = await extractImageFingerprint(imageUrl);
+        } finally {
+          URL.revokeObjectURL(imageUrl);
+        }
+      } catch (error) {
+        console.warn(`Could not load stored photo for design ${design.id}:`, error);
+      }
+    }
+    if (!dFp) dFp = await extractImageFingerprint(design.photoUrl);
+    if (!dFp.perceptualHash || dFp.hash === 'unavailable') return null;
+    return { design, similarity: calculateSimilarity(queryFp, dFp) };
+  }));
 
-    const similarity = calculateSimilarity(queryFp, dFp);
-    return { design: d, similarity };
-  });
-
-  scored.sort((a, b) => b.similarity - a.similarity);
-  return scored.slice(0, 3);
+  return scored
+    .filter((result): result is SimilarityResult => result !== null)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 3);
 }

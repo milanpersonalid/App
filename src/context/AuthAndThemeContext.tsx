@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AppTheme, UserProfile } from '../types';
+import { isSupabaseConfigured, requireSupabase, supabase } from '../lib/supabase';
+import { fetchOwnAccessProfile } from '../services/userAccessService';
+
+const INITIAL_ADMIN_EMAIL = 'milanpersonalid@gmail.com';
 
 export const DEFAULT_USER: UserProfile = {
   id: 'usr-admin-01',
   name: 'Milan Ajudiya',
-  email: 'mkajudiya001@gmail.com',
+  email: 'milanpersonalid@gmail.com',
   role: 'Factory Administrator & Production Head',
   initials: 'MA',
   phone: '+91 98250 12345',
@@ -42,9 +46,12 @@ interface AuthAndThemeContextType {
   toggleTheme: () => void;
   currentUser: UserProfile | null;
   isLoggedIn: boolean;
-  login: (user?: UserProfile) => void;
-  logout: () => void;
-  updateProfile: (data: Partial<UserProfile>) => void;
+  isAuthReady: boolean;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  requestAccess: (name: string, email: string, password: string) => Promise<string>;
+  logout: () => Promise<void>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   soundEnabled: boolean;
   setSoundEnabled: (val: boolean) => void;
   hapticEnabled: boolean;
@@ -54,56 +61,83 @@ interface AuthAndThemeContextType {
 const AuthAndThemeContext = createContext<AuthAndThemeContextType | undefined>(undefined);
 
 export const AuthAndThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Theme state with localStorage persistence
-  const [theme, setThemeState] = useState<AppTheme>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('shreenathji_theme');
-      if (saved === 'bright' || saved === 'dark') return saved;
-    }
-    return 'dark';
-  });
+  const [theme, setThemeState] = useState<AppTheme>('dark');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(!supabase);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [hapticEnabled, setHapticEnabled] = useState<boolean>(true);
 
-  // User auth state with localStorage persistence
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const savedAuth = localStorage.getItem('shreenathji_auth_logged_in');
-      if (savedAuth === 'false') return false;
-      return true;
-    }
-    return true;
-  });
+  const profileFromAuthUser = (
+    user: { id: string; email?: string; user_metadata?: Record<string, any> },
+    access?: { fullName: string; role: 'admin' | 'member'; accessStatus: 'pending' | 'approved' | 'rejected' }
+  ): UserProfile => {
+    const metadata = user.user_metadata ?? {};
+    const email = user.email || metadata.email || '';
+    const name = access?.fullName || metadata.name || email.split('@')[0] || 'Workshop User';
+    return {
+      id: user.id,
+      name,
+      email,
+      role: access?.role === 'admin' ? 'Administrator' : 'Production User',
+      initials: metadata.initials || name.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
+      phone: metadata.phone || '',
+      facility: metadata.facility || 'Shreenathji Imitation Jewellery',
+      permissions: Array.isArray(metadata.permissions) ? metadata.permissions : [],
+      avatarUrl: metadata.avatar_url || undefined,
+      accessRole: access?.role,
+      accessStatus: access?.accessStatus,
+    };
+  };
 
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('shreenathji_user_profile');
-      if (savedUser) {
-        try {
-          const parsed = JSON.parse(savedUser);
-          if (parsed.name === 'Manoj Kajudiya') {
-            const updated = { ...parsed, name: 'Milan Ajudiya', initials: 'MA' };
-            localStorage.setItem('shreenathji_user_profile', JSON.stringify(updated));
-            return updated;
-          }
-          return parsed;
-        } catch {
-          return DEFAULT_USER;
+  const hydrateAuthenticatedUser = async (user: { id: string; email?: string; user_metadata?: Record<string, any> }) => {
+    let access;
+    try {
+      access = await fetchOwnAccessProfile(user.id);
+    } catch (error) {
+      // Keep the existing administrator usable while the new migration is being deployed.
+      if (user.email?.toLowerCase() !== INITIAL_ADMIN_EMAIL) throw error;
+      access = {
+        id: user.id,
+        email: user.email,
+        fullName: user.user_metadata?.name || user.email.split('@')[0],
+        role: 'admin' as const,
+        accessStatus: 'approved' as const,
+        requestedAt: new Date().toISOString(),
+      };
+    }
+    if (!access) throw new Error('Your access profile is not set up. Contact the administrator.');
+    if (access.accessStatus === 'pending') throw new Error('Your access request is awaiting administrator approval.');
+    if (access.accessStatus === 'rejected') throw new Error('Your access request was rejected. Contact the administrator.');
+    const profile = profileFromAuthUser(user, access);
+    setCurrentUser(profile);
+    setIsLoggedIn(true);
+    return profile;
+  };
+
+  useEffect(() => {
+    if (!supabase) return;
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => {
+        if (!session?.user) {
+          setCurrentUser(null);
+          setIsLoggedIn(false);
+          setIsAuthReady(true);
+          return;
         }
-      }
-    }
-    return DEFAULT_USER;
-  });
-
-  // Preferences
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('shreenathji_sound_fx') !== 'false';
-  });
-  const [hapticEnabled, setHapticEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('shreenathji_haptic') !== 'false';
-  });
+        void hydrateAuthenticatedUser(session.user)
+          .catch(() => {
+            setCurrentUser(null);
+            setIsLoggedIn(false);
+          })
+          .finally(() => setIsAuthReady(true));
+      }, 0);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   // Apply theme to document root and body class
   useEffect(() => {
-    localStorage.setItem('shreenathji_theme', theme);
     const root = document.documentElement;
     if (theme === 'bright') {
       root.classList.add('theme-bright');
@@ -124,24 +158,64 @@ export const AuthAndThemeProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setThemeState((prev) => (prev === 'dark' ? 'bright' : 'dark'));
   };
 
-  const login = (user?: UserProfile) => {
-    const activeUser = user || DEFAULT_USER;
-    setCurrentUser(activeUser);
-    setIsLoggedIn(true);
-    localStorage.setItem('shreenathji_auth_logged_in', 'true');
-    localStorage.setItem('shreenathji_user_profile', JSON.stringify(activeUser));
+  const login = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured.');
+    }
+    const { data, error } = await requireSupabase().auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (!data.user) throw new Error('Supabase did not return an authenticated user.');
+    try {
+      await hydrateAuthenticatedUser(data.user);
+    } catch (accessError) {
+      await requireSupabase().auth.signOut();
+      throw accessError;
+    }
   };
 
-  const logout = () => {
+  const requestAccess = async (name: string, email: string, password: string): Promise<string> => {
+    if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!name.trim()) throw new Error('Enter your name.');
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw new Error('Enter a valid email address.');
+    if (password.length < 6) throw new Error('Password must contain at least 6 characters.');
+    const { data, error } = await requireSupabase().auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: { data: { name: name.trim() } },
+    });
+    if (error) throw error;
+    if (data.session) await requireSupabase().auth.signOut();
+    return 'Request submitted. Check your email and confirm your account, then wait for administrator approval before signing in.';
+  };
+
+  const logout = async () => {
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    }
     setIsLoggedIn(false);
-    localStorage.setItem('shreenathji_auth_logged_in', 'false');
+    setCurrentUser(null);
   };
 
-  const updateProfile = (data: Partial<UserProfile>) => {
+  const updateProfile = async (data: Partial<UserProfile>) => {
     if (!currentUser) return;
-    const updated = { ...currentUser, ...data };
+    const { data: authData, error } = await requireSupabase().auth.updateUser({
+      data: {
+        name: data.name ?? currentUser.name,
+        phone: data.phone ?? currentUser.phone,
+        initials: data.initials ?? currentUser.initials,
+      },
+    });
+    if (error) throw error;
+    const updated = authData.user
+      ? profileFromAuthUser(authData.user, {
+        fullName: data.name ?? currentUser.name,
+        role: currentUser.accessRole ?? 'member',
+        accessStatus: currentUser.accessStatus ?? 'approved',
+      })
+      : { ...currentUser, ...data };
     setCurrentUser(updated);
-    localStorage.setItem('shreenathji_user_profile', JSON.stringify(updated));
   };
 
   return (
@@ -152,19 +226,16 @@ export const AuthAndThemeProvider: React.FC<{ children: React.ReactNode }> = ({ 
         toggleTheme,
         currentUser,
         isLoggedIn,
+        isAuthReady,
+        isAdmin: currentUser?.accessRole === 'admin' && currentUser.accessStatus === 'approved',
         login,
+        requestAccess,
         logout,
         updateProfile,
         soundEnabled,
-        setSoundEnabled: (val) => {
-          setSoundEnabled(val);
-          localStorage.setItem('shreenathji_sound_fx', String(val));
-        },
+        setSoundEnabled,
         hapticEnabled,
-        setHapticEnabled: (val) => {
-          setHapticEnabled(val);
-          localStorage.setItem('shreenathji_haptic', String(val));
-        },
+        setHapticEnabled,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import {
@@ -33,30 +33,21 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
   const [name, setName] = useState('');
   const [orderRef, setOrderRef] = useState<string>(generateDesignCode);
   const [lowStockThreshold, setLowStockThreshold] = useState<string>('500'); // default 500
-  const [sampleWeight, setSampleWeight] = useState<string>('150.0');
-  const [samplePieceCount, setSamplePieceCount] = useState<string>('100');
   const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [photoFile, setPhotoFile] = useState<File | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Auto-calculate average weight per piece
-  const avgWeight = useMemo(() => {
-    const w = parseFloat(sampleWeight);
-    const p = parseInt(samplePieceCount, 10);
-    if (w > 0 && p > 0) {
-      return Number((w / p).toFixed(4));
-    }
-    return 0;
-  }, [sampleWeight, samplePieceCount]);
+  useEffect(() => {
+    if (!photoUrl.startsWith('blob:')) return;
+    return () => URL.revokeObjectURL(photoUrl);
+  }, [photoUrl]);
 
   const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setPhotoFile(file);
+      setPhotoUrl(URL.createObjectURL(file));
     }
   };
 
@@ -66,11 +57,6 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
       setError('Please enter a descriptive ring design name.');
       return;
     }
-    if (avgWeight <= 0) {
-      setError('Please provide a valid sample weight and sample piece count to establish a baseline.');
-      return;
-    }
-
     setIsSubmitting(true);
     setError('');
 
@@ -80,9 +66,8 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
         name: name.trim(),
         orderRef: orderRef.trim(),
         photoUrl: finalPhoto,
+        photoFile,
         lowStockThreshold: parseInt(lowStockThreshold, 10) || 500,
-        sampleWeight: parseFloat(sampleWeight) || 150,
-        samplePieceCount: parseInt(samplePieceCount, 10) || 100,
       });
 
       onSuccess();
@@ -296,87 +281,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
             </p>
           </div>
 
-          {/* Section 3: Baseline Average Weight Calculator */}
-          <div
-            className={`p-4 rounded-2xl border transition-colors space-y-3.5 ${
-              isBright
-                ? 'bg-[#FFFBEB] border-[#FDE68A]'
-                : 'bg-amber-500/5 border-amber-500/25'
-            }`}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label
-                  className={`block text-[11px] font-semibold uppercase tracking-wider mb-1 ${
-                    isBright ? 'text-amber-950' : 'text-neutral-300'
-                  }`}
-                >
-                  Sample Weight (g)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 150.0"
-                  value={sampleWeight}
-                  onChange={(e) => setSampleWeight(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl border font-mono text-sm font-semibold outline-none transition ${
-                    isBright
-                      ? 'bg-white border-amber-300 text-amber-950 focus:border-amber-600 focus:ring-1 focus:ring-amber-500/30'
-                      : 'bg-neutral-900 border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label
-                  className={`block text-[11px] font-semibold uppercase tracking-wider mb-1 ${
-                    isBright ? 'text-amber-950' : 'text-neutral-300'
-                  }`}
-                >
-                  Sample Piece Count
-                </label>
-                <input
-                  type="number"
-                  required
-                  placeholder="e.g. 100"
-                  value={samplePieceCount}
-                  onChange={(e) => setSamplePieceCount(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl border font-mono text-sm font-semibold outline-none transition ${
-                    isBright
-                      ? 'bg-white border-amber-300 text-amber-950 focus:border-amber-600 focus:ring-1 focus:ring-amber-500/30'
-                      : 'bg-neutral-900 border-neutral-700 text-neutral-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Calculated Result Card */}
-            <div
-              className={`p-3 rounded-xl border flex items-center justify-between ${
-                isBright
-                  ? 'bg-white border-amber-200 shadow-2xs'
-                  : 'bg-[#18181B] border-amber-500/30'
-              }`}
-            >
-              <span
-                className={`text-xs font-medium ${
-                  isBright ? 'text-amber-950' : 'text-neutral-300'
-                }`}
-              >
-                Baseline Average Weight:
-              </span>
-              <span
-                className={`font-mono font-bold text-sm sm:text-base ${
-                  isBright ? 'text-amber-800' : 'text-amber-400'
-                }`}
-              >
-                {avgWeight > 0 ? `${avgWeight} g / piece` : '—'}
-              </span>
-            </div>
-          </div>
-
-          {/* Section 4: Ring Visuals & Presets */}
+          {/* Section 3: Ring Visuals & Presets */}
           <div
             className={`p-4 rounded-2xl border transition-colors space-y-3 ${
               isBright
@@ -467,4 +372,3 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
     </div>
   );
 };
-

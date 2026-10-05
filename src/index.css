@@ -548,20 +548,47 @@ table tbody tr:hover {
     overflow: visible !important;
   }
 
-  /* Completely hide all interactive UI elements, navigation, and modal chrome */
+  /* Print only the slip; keep it out of the normal no-print overlay rule. */
+  body * {
+    visibility: hidden !important;
+  }
+
+  #stage-slip-print,
+  #stage-slip-print * {
+    visibility: visible !important;
+  }
+
+  /* Hide interactive UI while leaving the modal ancestors printable. */
   .no-print,
   .no-print * {
     display: none !important;
   }
 
-  /* Make sure modal overlays do not mask or tint the printed page */
-  .fixed.inset-0 {
+  .stage-slip-print-overlay {
     position: static !important;
+    display: block !important;
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
     overflow: visible !important;
     backdrop-filter: none !important;
+  }
+
+  .stage-slip-print-dialog {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
   }
 
   .printable-slip-wrapper {
@@ -624,4 +651,3 @@ table tbody tr:hover {
     margin: 6mm 8mm;
   }
 }
-

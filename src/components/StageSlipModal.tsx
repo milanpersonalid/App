@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Lot, Design, Stage, LotStageRecord } from '../types';
 import { generateQrCodeDataUrl, generateBarcodeSvg, generateLotStageQrPayload } from '../utils/qrBarcode';
 import { Printer, X, ShieldCheck, Languages, Check, RefreshCw, Eye, Edit3 } from 'lucide-react';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
+import { SearchableSelect } from './SearchableSelect';
 
 interface StageSlipModalProps {
   lot: Lot;
@@ -12,6 +14,10 @@ interface StageSlipModalProps {
 }
 
 type SlipLanguage = 'gu' | 'en' | 'bi';
+
+const NativePrint = registerPlugin<{ print: (options: { jobName: string }) => Promise<{ started: boolean }> }>(
+  'NativePrint'
+);
 
 const STAGE_ORDER: Record<string, number> = {
   Wax: 1,
@@ -93,7 +99,7 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
   }, [selectedStageName, lot.branch]);
 
   const [processTitle, setProcessTitle] = useState<string>(defaultProcess);
-  const [amountValue, setAmountValue] = useState<string>('1250');
+  const [amountValue, setAmountValue] = useState<string>('');
   const [returnMode, setReturnMode] = useState<'blank' | 'filled'>('blank');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
@@ -109,9 +115,22 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
     return lot.history[lot.history.length - 1];
   }, [lot.history, selectedStageName]);
 
-  const weightSent = selectedRecord?.weightSent ?? lot.initialWeight ?? 0;
-  const piecesSent = selectedRecord?.piecesSent ?? lot.initialPieces ?? 0;
-  const dateSent = formatSlipDate(selectedRecord?.dateSent ?? lot.createdAt);
+  useEffect(() => {
+    setAmountValue(selectedRecord?.jobWorkAmount == null ? '' : String(selectedRecord.jobWorkAmount));
+  }, [selectedRecord]);
+
+  const isWaxSlip = selectedStageName === 'Wax';
+  const weightSent = selectedRecord?.weightSent ?? (isWaxSlip ? 0 : lot.initialWeight) ?? 0;
+  const piecesSent = selectedRecord?.piecesSent ?? (isWaxSlip ? 0 : lot.initialPieces) ?? 0;
+  const waxReceivedWeight = selectedRecord?.weightReceived ?? lot.initialWeight;
+  const waxEstimatedPieces = selectedRecord?.estimatedPieces ?? lot.initialPieces;
+  const waxOrderedQuantity = selectedRecord?.orderedQuantity;
+  const waxOrderedDifference = waxOrderedQuantity == null ? undefined : waxOrderedQuantity - waxEstimatedPieces;
+  const slipDate = formatSlipDate(
+    isWaxSlip
+      ? selectedRecord?.dateReceived ?? selectedRecord?.completedAt ?? lot.createdAt
+      : selectedRecord?.dateSent ?? lot.createdAt
+  );
   const karigarName = selectedRecord?.karigarName ?? lot.currentKarigarName;
   const stageNumber = STAGE_ORDER[selectedStageName] || 1;
 
@@ -119,17 +138,27 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
   useEffect(() => {
     const qrPayload =
       selectedRecord?.qrData ||
-      generateLotStageQrPayload(lot.lotNumber, selectedStageName, karigarName, dateSent);
+      generateLotStageQrPayload(lot.lotNumber, selectedStageName, karigarName, slipDate);
 
     generateQrCodeDataUrl(qrPayload).then(setQrDataUrl);
-  }, [selectedRecord, lot.lotNumber, selectedStageName, karigarName, dateSent]);
+  }, [selectedRecord, lot.lotNumber, selectedStageName, karigarName, slipDate]);
 
   const barcodeSvg = useMemo(() => {
-    // Generate linear barcode of design barcode or lot number
-    return generateBarcodeSvg(design.barcode || lot.lotNumber, 26);
+    // Standards-compliant Code 128 barcode for the permanent design ID.
+    return generateBarcodeSvg(design.barcode || lot.lotNumber, 40);
   }, [design.barcode, lot.lotNumber]);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await NativePrint.print({ jobName: `Slip ${lot.lotNumber} - ${selectedStageName}` });
+      } catch (error) {
+        console.error('Android print could not be started:', error);
+        window.alert('Could not open print options. Please try again.');
+      }
+      return;
+    }
+
     window.print();
   };
 
@@ -170,11 +199,11 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
           onClose();
         }
       }}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full no-print cursor-pointer"
+      className="stage-slip-print-overlay fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overflow-x-hidden w-full max-w-full cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full max-w-3xl rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden overflow-x-hidden my-3 sm:my-4 max-w-full transition-colors flex flex-col max-h-[92vh] sm:max-h-[95vh] cursor-default ${
+        className={`stage-slip-print-dialog relative w-full max-w-3xl rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden overflow-x-hidden my-3 sm:my-4 max-w-full transition-colors flex flex-col max-h-[92vh] sm:max-h-[95vh] cursor-default ${
           isBright
             ? 'bg-white border-[#E4E4E7] text-[#18181B]'
             : 'bg-[#18181B] border-[#27272A] text-neutral-100'
@@ -281,26 +310,25 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Select Stage / તબક્કો:
               </label>
-              <select
+              <SearchableSelect
                 value={selectedStageName}
-                onChange={(e) => setSelectedStageName(e.target.value as Stage)}
+                onChange={(value) => setSelectedStageName(value as Stage)}
+                searchPlaceholder="Search stages…"
                 className={`py-1 px-2 rounded-lg border text-xs font-semibold outline-none transition ${
                   isBright
                     ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A]'
                     : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                 }`}
-              >
-                {lot.history.map((h, i) => (
-                  <option key={i} value={h.stage}>
-                    {i + 1}. {h.stage} ({GUJARATI_STAGE_NAMES[h.stage] || h.stage})
-                  </option>
-                ))}
-                {!lot.history.some((h) => h.stage === lot.currentStage) && (
-                  <option value={lot.currentStage}>
-                    {STAGE_ORDER[lot.currentStage] || 1}. {lot.currentStage}
-                  </option>
-                )}
-              </select>
+                options={[
+                  ...lot.history.map((h, i) => ({
+                    value: h.stage,
+                    label: `${i + 1}. ${h.stage} (${GUJARATI_STAGE_NAMES[h.stage] || h.stage})`,
+                  })),
+                  ...(!lot.history.some((h) => h.stage === lot.currentStage)
+                    ? [{ value: lot.currentStage, label: `${STAGE_ORDER[lot.currentStage] || 1}. ${lot.currentStage}` }]
+                    : []),
+                ]}
+              />
             </div>
 
             {/* Process / Header Title */}
@@ -329,13 +357,14 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
               <input
                 type="text"
                 value={amountValue}
-                onChange={(e) => setAmountValue(e.target.value)}
+                readOnly
                 className={`py-1 px-2 rounded-lg border font-mono text-xs font-semibold outline-none transition ${
                   isBright
                     ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A]'
                     : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                 }`}
-                placeholder="1250"
+                placeholder="Not recorded"
+                title="Saved when this stage was dispatched"
               />
             </div>
           </div>
@@ -444,56 +473,63 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                       {design.name}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.goodPiecesLabel}
+                      {isWaxSlip ? 'ORDERED QUANTITY' : t.goodPiecesLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-mono font-bold text-neutral-800 border-b border-black">
-                      {returnMode === 'filled' && selectedRecord?.statedPieces != null
-                        ? selectedRecord.statedPieces
-                        : ''}
+                      {isWaxSlip ? waxOrderedQuantity ?? '—' : returnMode === 'filled' && selectedRecord?.statedPieces != null
+                        ? selectedRecord.statedPieces : ''}
                     </td>
                   </tr>
 
                   {/* Row 5: Weight Sent / Without Studs */}
                   <tr className="border-b border-black">
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.weightLabel}
+                      {isWaxSlip ? 'WAX RECEIVED WEIGHT (g)' : t.weightLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold font-mono border-r-2 border-b border-black text-black">
-                      {(weightSent ?? 0).toFixed(3)}
+                      {(isWaxSlip ? waxReceivedWeight : weightSent).toFixed(3)}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.withoutStudLabel}
+                      {isWaxSlip ? 'KARIGAR STATED PIECES' : t.withoutStudLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-mono text-neutral-800 border-b border-black">
-                      {/* Blank area for Karigar handwriting */}
+                      {isWaxSlip ? selectedRecord?.statedPieces ?? '' : ''}
                     </td>
                   </tr>
 
                   {/* Row 6: Pieces Sent / Rejection Pieces */}
                   <tr className="border-b border-black">
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.piecesLabel}
+                      {isWaxSlip ? 'RECEIVED PIECES (EST.)' : t.piecesLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold font-mono border-r-2 border-b border-black text-black">
-                      {piecesSent}
+                      {isWaxSlip ? waxEstimatedPieces : piecesSent}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.rejectionLabel}
+                      {isWaxSlip ? 'ORDER DIFFERENCE' : t.rejectionLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-mono font-bold text-red-600 border-b border-black">
-                      {returnMode === 'filled' && selectedRecord?.rejectedPieces != null
+                      {isWaxSlip
+                        ? waxOrderedDifference == null
+                          ? '—'
+                          : waxOrderedDifference > 0
+                            ? `SHORT ${waxOrderedDifference}`
+                            : waxOrderedDifference < 0
+                              ? `EXTRA ${Math.abs(waxOrderedDifference)}`
+                              : 'EXACT'
+                        : returnMode === 'filled' && selectedRecord?.rejectedPieces != null
                         ? selectedRecord.rejectedPieces
                         : ''}
                     </td>
                   </tr>
 
                   {/* Row 7: Amount (રકમ) / Return Weight */}
-                  <tr className="border-b border-black">
+                  <tr className={`border-b border-black ${isWaxSlip ? 'hidden' : ''}`}>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
                       {t.amountLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold font-mono border-r-2 border-b border-black text-black">
-                      {amountValue}
+                      {amountValue || '—'}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
                       {t.returnWeightLabel}
@@ -508,15 +544,15 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                   {/* Row 8: Date / Total */}
                   <tr className="border-b border-black">
                     <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
-                      {t.dateLabel}
+                      {isWaxSlip ? 'RECEIVED DATE' : t.dateLabel}
                     </td>
                     <td className="p-1.5 sm:p-2 font-bold font-mono border-r-2 border-b border-black text-black">
-                      {dateSent}
+                      {slipDate}
                     </td>
-                    <td className="p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black">
+                    <td className={`p-1.5 sm:p-2 font-bold bg-neutral-100 border-r border-b border-black ${isWaxSlip ? 'hidden' : ''}`}>
                       {t.totalLabel}
                     </td>
-                    <td className="p-1.5 sm:p-2 font-mono font-bold text-black border-b border-black">
+                    <td className={`p-1.5 sm:p-2 font-mono font-bold text-black border-b border-black ${isWaxSlip ? 'hidden' : ''}`}>
                       {returnMode === 'filled' && selectedRecord?.statedPieces != null
                         ? selectedRecord.statedPieces
                         : ''}
@@ -595,13 +631,13 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
           <div className="flex items-center gap-2 min-w-0">
             <ShieldCheck className="w-4 h-4 text-amber-500 shrink-0" />
             <span className="hidden sm:inline truncate">
-              Printed slip accompanies physical tray to workshop artisans. Scan QR on arrival to confirm.
+              {isWaxSlip ? 'Wax receipt record — no material was sent to the Wax karigar.' : 'Printed slip accompanies physical tray to workshop karigars. Scan QR on arrival to confirm.'}
             </span>
-            <span className="sm:hidden text-[11px] truncate">Accompany batch with this slip.</span>
+            <span className="sm:hidden text-[11px] truncate">{isWaxSlip ? 'Wax receipt record.' : 'Accompany batch with this slip.'}</span>
           </div>
 
           <div className="flex items-center gap-2 ml-auto shrink-0">
-            <button
+            {!isWaxSlip && <button
               onClick={() => setReturnMode(returnMode === 'blank' ? 'filled' : 'blank')}
               className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-medium transition border flex items-center gap-1.5 text-xs ${
                 isBright
@@ -616,7 +652,7 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
               <span className="sm:hidden">
                 {returnMode === 'blank' ? 'Pre-filled' : 'Blank'}
               </span>
-            </button>
+            </button>}
 
             <button
               onClick={handlePrint}
