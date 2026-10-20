@@ -5,7 +5,7 @@ import {
   ArrowUpFromLine,
   Download,
   IndianRupee,
-  ReceiptText,
+  BookOpenText,
   Scale,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -193,7 +193,7 @@ export const KarigarLedgerView: React.FC = () => {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className={`text-xl font-bold font-brand flex items-center gap-2 ${isBright ? 'text-[#18181B]' : 'text-neutral-100'}`}>
-            <ReceiptText className="w-5 h-5 text-amber-500" /> Karigar Ledger
+            <BookOpenText className="w-5 h-5 text-amber-500" /> Karigar Ledger
           </h2>
           <p className={`mt-1 text-xs ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
             Material sent, material received, and slip-wise job-work amounts.

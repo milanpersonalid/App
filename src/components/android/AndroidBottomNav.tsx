@@ -1,11 +1,12 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  Layers,
-  Sparkles,
-  Archive,
-  ReceiptText,
+  House,
+  Boxes,
+  BookOpenText,
+  Warehouse,
+  type LucideIcon,
 } from 'lucide-react';
+import { JewelleryIcon } from '../icons/JewelleryIcon';
 import { ActiveTab } from '../Navigation';
 import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
@@ -33,20 +34,21 @@ export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
     }
   };
 
-  const navItems: { id: ActiveTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
-    { id: 'designs', label: 'Designs', icon: Sparkles },
-    { id: 'lots', label: 'Lots', icon: Layers },
-    { id: 'ledger', label: 'Ledger', icon: ReceiptText },
-    { id: 'ready_stock', label: 'Stock', icon: Archive },
+  const navItems: { id: ActiveTab; label: string; icon: LucideIcon }[] = [
+    { id: 'dashboard', label: 'Home', icon: House },
+    { id: 'designs', label: 'Designs', icon: JewelleryIcon },
+    { id: 'lots', label: 'Lots', icon: Boxes },
+    { id: 'ledger', label: 'Ledger', icon: BookOpenText },
+    { id: 'ready_stock', label: 'Stock', icon: Warehouse },
   ];
 
   return (
     <nav
-      className={`h-16 flex-shrink-0 w-full max-w-full overflow-x-hidden px-2 flex items-center justify-around select-none z-40 relative border-t transition-colors duration-200 ${
+      aria-label="Main navigation"
+      className={`h-[72px] flex-shrink-0 w-full max-w-full overflow-x-hidden px-2 flex items-center justify-around select-none z-40 relative border-t transition-colors duration-200 ${
         isBright
-          ? 'bg-[#FFFFFF] border-[#D4D4D8]'
-          : 'bg-[#292930] border-[#3F3F46]'
+          ? 'bg-white border-[#EADFD8] shadow-[0_-6px_24px_rgba(61,43,33,0.07)]'
+          : 'bg-[#292930] border-[#48444A] shadow-[0_-6px_24px_rgba(0,0,0,0.18)]'
       }`}
     >
       {navItems.map((item) => {
@@ -61,38 +63,32 @@ export const AndroidBottomNav: React.FC<AndroidBottomNavProps> = ({
               triggerHaptic();
               onSelectTab(item.id);
             }}
-            className="flex-1 flex flex-col items-center justify-center py-1 relative group focus:outline-none"
+            aria-current={isActive ? 'page' : undefined}
+            aria-label={item.label}
+            className="min-w-0 flex-1 h-full flex flex-col items-center justify-center gap-0.5 relative group focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#E07A5F]"
           >
-            {/* MD3 Active Indicator Pill */}
             <div
-              className={`relative px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${
+              className={`relative w-12 h-9 rounded-2xl transition-colors duration-200 flex items-center justify-center ${
                 isActive
-                  ? 'bg-[#E07A5F]/20 text-[#E07A5F]'
+                  ? isBright ? 'bg-[#FBE8E1] text-[#B65E47]' : 'bg-[#E07A5F]/20 text-[#F29A80]'
                   : isBright
-                  ? 'text-[#71717A] group-hover:text-[#27272A] group-active:scale-95'
-                  : 'text-[#A1A1AA] group-hover:text-[#F4F4F6] group-active:scale-95'
+                  ? 'text-[#77717A] group-hover:bg-[#F6F0EC] group-hover:text-[#3F3F46]'
+                  : 'text-[#B5B0B8] group-hover:bg-white/5 group-hover:text-white'
               }`}
             >
               <IconComponent
-                className={`w-5 h-5 transition-transform duration-200 ${
-                  isActive
-                    ? 'scale-105 text-[#E07A5F]'
-                    : isBright
-                    ? 'text-[#71717A]'
-                    : 'text-[#A1A1AA]'
-                }`}
+                className="w-[22px] h-[22px]"
+                strokeWidth={isActive ? 2.3 : 1.9}
               />
-
             </div>
 
-            {/* Label */}
             <span
-              className={`text-[10px] mt-0.5 tracking-tight font-medium transition-colors ${
+              className={`text-[11px] leading-4 tracking-tight transition-colors ${
                 isActive
-                  ? 'text-[#E07A5F] font-semibold'
+                  ? isBright ? 'text-[#A94E39] font-bold' : 'text-[#F29A80] font-bold'
                   : isBright
-                  ? 'text-[#71717A]'
-                  : 'text-[#A1A1AA]'
+                  ? 'text-[#77717A] font-medium'
+                  : 'text-[#B5B0B8] font-medium'
               }`}
             >
               {item.label}

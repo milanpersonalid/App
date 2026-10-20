@@ -6,7 +6,7 @@ import { Lot, Stage } from '../types';
 import { calculateJobWorkAmount, rateUnitLabel } from '../utils/stagePricing';
 import {
   X,
-  Layers,
+  Boxes,
   Sparkles,
   Scale,
   RefreshCw,
@@ -214,7 +214,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}
             >
-              <Layers className="w-5 h-5" />
+              <Boxes className="w-5 h-5" />
             </div>
             <div>
               <h3

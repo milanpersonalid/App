@@ -4,7 +4,7 @@ import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { SearchableSelect } from '../SearchableSelect';
 import { Lot, Design, Stage, LotStatus } from '../../types';
 import {
-  Layers,
+  Boxes,
   Search,
   Printer,
   Scale,
@@ -79,7 +79,7 @@ export const LotsView: React.FC<LotsViewProps> = ({
               isBright ? 'text-[#18181B]' : 'text-neutral-100'
             }`}
           >
-            <Layers className="w-5 h-5 text-amber-500" />
+            <Boxes className="w-5 h-5 text-amber-500" />
             Lots Tracker
           </h2>
         </div>

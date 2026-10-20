@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { ReadyStockItem, Lot } from '../../types';
 import {
-  Archive,
+  Warehouse,
   AlertTriangle,
   Sparkles,
   Scale,
@@ -78,7 +78,7 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
                   : 'bg-[#292930] text-neutral-200 border-[#3F3F46]'
               }`}
             >
-              <Archive className="w-5 h-5" />
+              <Warehouse className="w-5 h-5" />
             </div>
             <span>Ready Stock</span>
           </h2>

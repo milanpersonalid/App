@@ -4,13 +4,13 @@ import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { Design } from '../../types';
 import { generateBarcodeSvg } from '../../utils/qrBarcode';
 import {
-  Sparkles,
   Plus,
   Search,
   X,
   Trash2,
   Pencil,
 } from 'lucide-react';
+import { JewelleryIcon } from '../icons/JewelleryIcon';
 import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 
 interface DesignsViewProps {
@@ -49,8 +49,8 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
       {/* Top Header & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-neutral-100 font-brand flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
+          <h2 className={`text-xl font-bold font-brand flex items-center gap-2 ${isBright ? 'text-[#18181B]' : 'text-neutral-100'}`}>
+            <JewelleryIcon className="w-5 h-5 text-amber-500" />
             Designs
           </h2>
         </div>

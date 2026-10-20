@@ -4,7 +4,7 @@ import { calculateJobWorkAmount, getStageRateBasis, rateBasisLabel, rateUnitLabe
 import { useApp } from '../context/AppContext';
 import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import { SearchableSelect } from './SearchableSelect';
-import { ArrowRight, Sparkles, X, ShieldAlert, Printer } from 'lucide-react';
+import { ArrowRight, Warehouse, X, ShieldAlert, Printer } from 'lucide-react';
 
 interface Step7NextStageModalProps {
   lot: Lot;
@@ -249,7 +249,7 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
           {isMovingToReadyStock && (
             <div className="p-3.5 rounded-xl bg-neutral-950 border border-emerald-500/30 text-xs text-emerald-300 space-y-1">
               <div className="font-semibold flex items-center gap-1.5 text-emerald-400">
-                <Sparkles className="w-4 h-4" /> Ready Stock Stock-In Confirmation
+                <Warehouse className="w-4 h-4" /> Ready Stock Stock-In Confirmation
               </div>
               <p className="text-neutral-300">
                 This lot will complete production and deposit into{' '}

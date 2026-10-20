@@ -5,7 +5,6 @@ import {
   Camera,
   Download,
   Info,
-  Sparkles,
   PlusCircle,
   Settings,
   LogOut,
@@ -13,6 +12,7 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react';
+import { JewelleryIcon } from '../icons/JewelleryIcon';
 import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
@@ -164,7 +164,7 @@ export const AndroidTopAppBar: React.FC<AndroidTopAppBarProps> = ({
                   isBright ? 'hover:bg-stone-100 text-[#1C1917]' : 'hover:bg-stone-800 text-[#F5F5F4]'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                <JewelleryIcon className="w-4 h-4 text-[#C5A059]" />
                 <span>Create Design</span>
               </button>
 

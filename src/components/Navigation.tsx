@@ -1,14 +1,14 @@
 import React from 'react';
 import { BrandLogo } from './BrandLogo';
 import {
-  LayoutDashboard,
-  Layers,
-  Sparkles,
-  Archive,
-  ReceiptText,
+  House,
+  Boxes,
+  Warehouse,
+  BookOpenText,
   Camera,
   PlusCircle,
 } from 'lucide-react';
+import { JewelleryIcon } from './icons/JewelleryIcon';
 import { useApp } from '../context/AppContext';
 
 export type ActiveTab = 'dashboard' | 'designs' | 'lots' | 'ledger' | 'ready_stock';
@@ -35,21 +35,21 @@ export const Navigation: React.FC<NavigationProps> = ({
   const lowStockCount = getReadyStockSummary().filter((s) => s.isLowStock).length;
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'designs', label: 'Designs', icon: <Sparkles className="w-4 h-4" /> },
+    { id: 'dashboard', label: 'Dashboard', icon: <House className="w-4 h-4" /> },
+    { id: 'designs', label: 'Designs', icon: <JewelleryIcon className="w-4 h-4" /> },
     {
       id: 'lots',
       label: 'Production Lots',
-      icon: <Layers className="w-4 h-4" />,
+      icon: <Boxes className="w-4 h-4" />,
       badge: awaitingEntryCount + stageCompleteCount || undefined,
     },
     {
       id: 'ready_stock',
       label: 'Ready Stock',
-      icon: <Archive className="w-4 h-4" />,
+      icon: <Warehouse className="w-4 h-4" />,
       badge: lowStockCount || undefined,
     },
-    { id: 'ledger', label: 'Karigar Ledger', icon: <ReceiptText className="w-4 h-4" /> },
+    { id: 'ledger', label: 'Karigar Ledger', icon: <BookOpenText className="w-4 h-4" /> },
   ];
 
   return (
@@ -90,7 +90,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             onClick={onOpenCreateDesign}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold border border-neutral-700 transition active:scale-95"
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <JewelleryIcon className="w-4 h-4 text-amber-400" />
             <span className="hidden md:inline">Create Design</span>
           </button>
 

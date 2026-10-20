@@ -10,7 +10,7 @@ import {
   ShieldAlert,
   CheckCircle2,
   Clock,
-  Layers,
+  Boxes,
   Sparkles,
   QrCode,
   Loader2,
@@ -166,7 +166,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}
             >
-              <Layers className="w-5 h-5" />
+              <Boxes className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">

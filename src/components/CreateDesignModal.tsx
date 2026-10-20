@@ -12,6 +12,7 @@ import {
   Sliders,
   CheckCircle2,
 } from 'lucide-react';
+import { JewelleryIcon } from './icons/JewelleryIcon';
 import { getSampleRingPhoto } from '../data/initialData';
 
 interface CreateDesignModalProps {
@@ -102,7 +103,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}
             >
-              <Plus className="w-5 h-5" />
+              <JewelleryIcon className="w-5 h-5" />
             </div>
             <div>
               <h3
