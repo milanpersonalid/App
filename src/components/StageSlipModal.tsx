@@ -26,8 +26,6 @@ const STAGE_ORDER: Record<string, number> = {
   Buff: 3,
   Zabora: 4,
   Dull: 5,
-  Dal: 5,
-  DAL: 5,
   Chhol: 6,
   Plating: 7,
   'Ready Stock': 8,
@@ -39,8 +37,6 @@ const GUJARATI_STAGE_NAMES: Record<string, string> = {
   Buff: 'બફિંગ (Buff)',
   Zabora: 'ઝબોરા (Zabora)',
   Dull: 'ડલ (Dull)',
-  Dal: 'ડલ (Dull)',
-  DAL: 'ડલ (Dull)',
   Chhol: 'છોલ (Chhol)',
   Plating: 'પ્લેટિંગ (Plating)',
   'Ready Stock': 'તૈયાર સ્ટોક (Ready)',
@@ -321,7 +317,7 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
               <SearchableSelect
                 value={selectedStageName}
                 onChange={(value) => setSelectedStageName(value as Stage)}
-                searchPlaceholder="Search stages…"
+                bright={isBright}
                 className={`py-1 px-2 rounded-lg border text-xs font-semibold outline-none transition ${
                   isBright
                     ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A]'
@@ -353,7 +349,6 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                     ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A]'
                     : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                 }`}
-                placeholder="e.g. WAX, CASTING, BUFF"
               />
             </div>
 
@@ -371,7 +366,6 @@ export const StageSlipModal: React.FC<StageSlipModalProps> = ({
                     ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A]'
                     : 'bg-neutral-900 border-neutral-700 text-neutral-100'
                 }`}
-                placeholder="Not recorded"
                 title={`Saved ${rateBasisLabel(rateBasis)} when this stage was dispatched`}
               />
             </div>

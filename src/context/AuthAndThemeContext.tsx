@@ -4,6 +4,7 @@ import { isSupabaseConfigured, requireSupabase, supabase } from '../lib/supabase
 import { fetchOwnAccessProfile } from '../services/userAccessService';
 
 const INITIAL_ADMIN_EMAIL = 'milanpersonalid@gmail.com';
+const THEME_STORAGE_KEY = 'shreenathji-theme';
 
 export const DEFAULT_USER: UserProfile = {
   id: 'usr-admin-01',
@@ -61,7 +62,11 @@ interface AuthAndThemeContextType {
 const AuthAndThemeContext = createContext<AuthAndThemeContextType | undefined>(undefined);
 
 export const AuthAndThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<AppTheme>('dark');
+  const [theme, setThemeState] = useState<AppTheme>(() => {
+    if (typeof window === 'undefined') return 'bright';
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return savedTheme === 'dark' || savedTheme === 'bright' ? savedTheme : 'bright';
+  });
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(!supabase);
@@ -152,10 +157,11 @@ export const AuthAndThemeProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const setTheme = (newTheme: AppTheme) => {
     setThemeState(newTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, newTheme);
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'bright' : 'dark'));
+    setTheme((theme === 'dark' ? 'bright' : 'dark'));
   };
 
   const login = async (email: string, password: string) => {

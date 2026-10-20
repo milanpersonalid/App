@@ -1,46 +1,36 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
-import { Design, CalibrationTarget } from '../../types';
+import { Design } from '../../types';
 import { generateBarcodeSvg } from '../../utils/qrBarcode';
-import { SearchableSelect } from '../SearchableSelect';
 import {
   Sparkles,
   Plus,
-  Scale,
-  RefreshCw,
   Search,
-  Layers,
-  AlertTriangle,
-  Barcode,
-  Check,
   X,
+  Trash2,
+  Pencil,
 } from 'lucide-react';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 
 interface DesignsViewProps {
   onOpenCreateDesign: () => void;
+  onOpenEditDesign: (design: Design) => void;
   onOpenCreateLotWithDesign: (designId: string) => void;
 }
 
 export const DesignsView: React.FC<DesignsViewProps> = ({
   onOpenCreateDesign,
+  onOpenEditDesign,
   onOpenCreateLotWithDesign,
 }) => {
-  const { designs, recalibrateDesign, updateLowStockThreshold } = useApp();
+  const { designs, lots, deleteDesign } = useApp();
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
   const [searchQuery, setSearchQuery] = useState('');
   const [previewDesign, setPreviewDesign] = useState<Design | null>(null);
 
-  // Inline recalibration state
-  const [recalibratingDesignId, setRecalibratingDesignId] = useState<string | null>(null);
-  const [recalTarget, setRecalTarget] = useState<CalibrationTarget>('wax');
-  const [recalWeight, setRecalWeight] = useState<string>('');
-  const [recalPieces, setRecalPieces] = useState<string>('');
-
-  // Inline threshold edit state
-  const [editingThresholdId, setEditingThresholdId] = useState<string | null>(null);
-  const [newThresholdValue, setNewThresholdValue] = useState<string>('');
+  const [deleteTarget, setDeleteTarget] = useState<{ design: Design; blocked: boolean } | null>(null);
 
   const filteredDesigns = designs.filter(
     (d) =>
@@ -49,24 +39,9 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
       d.barcode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSaveRecalibration = async (designId: string) => {
-    const w = parseFloat(recalWeight);
-    const p = parseInt(recalPieces, 10);
-    if (w > 0 && p > 0) {
-      const newAvg = w / p;
-      await recalibrateDesign(designId, newAvg, recalTarget);
-      setRecalibratingDesignId(null);
-      setRecalWeight('');
-      setRecalPieces('');
-    }
-  };
-
-  const handleSaveThreshold = async (designId: string) => {
-    const val = parseInt(newThresholdValue, 10);
-    if (val > 0) {
-      await updateLowStockThreshold(designId, val);
-      setEditingThresholdId(null);
-    }
+  const handleDeleteDesign = (design: Design) => {
+    const relatedLots = lots.filter((lot) => lot.designId === design.id).length;
+    setDeleteTarget({ design, blocked: relatedLots > 0 });
   };
 
   return (
@@ -85,7 +60,6 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
             <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Search design, ref, barcode..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100 text-xs outline-none focus:border-amber-500"
@@ -105,21 +79,38 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
         {filteredDesigns.map((design) => {
           const barcodeSvg = generateBarcodeSvg(design.barcode, 36);
 
-          const isRecalibrating = recalibratingDesignId === design.id;
-          const isEditingThreshold = editingThresholdId === design.id;
-
           return (
             <div
               key={design.id}
-              className={`p-3.5 rounded-2xl border flex flex-col justify-between space-y-3.5 transition shadow-sm ${
+              className={`relative p-3.5 rounded-2xl border flex flex-col justify-between space-y-3.5 transition shadow-sm ${
                 isBright
                   ? 'bg-white border-[#E4E4E7] hover:border-amber-400'
                   : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700'
               }`}
             >
+              <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onOpenEditDesign(design)}
+                  title="Edit design"
+                  aria-label={`Edit design ${design.name}`}
+                  className="p-0.5 text-amber-500/70 hover:text-amber-400 transition"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteDesign(design)}
+                  title="Delete design"
+                  aria-label={`Delete design ${design.name}`}
+                  className="p-0.5 text-red-500/65 hover:text-red-500 transition"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
               <div>
                 {/* Header: Photo & Title */}
-                <div className="flex items-start gap-3 mb-2.5">
+                <div className="flex items-start gap-3 mb-2.5 pr-12">
                   <button
                     type="button"
                     onClick={() => setPreviewDesign(design)}
@@ -127,13 +118,16 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                     aria-label={`View larger image of ${design.name}`}
                     title="View image"
                   >
-                    <img
-                      src={design.photoUrl}
-                      alt={design.name}
-                      className={`w-16 h-16 rounded-xl object-cover border ${
-                        isBright ? 'border-[#E2E8F0]' : 'border-neutral-700'
-                      }`}
-                    />
+                    {design.photoUrl && (
+                      <img
+                        src={design.photoUrl}
+                        alt={design.name}
+                        loading="lazy"
+                        className={`w-16 h-16 rounded-xl object-cover border ${
+                          isBright ? 'border-[#E2E8F0]' : 'border-neutral-700'
+                        }`}
+                      />
+                    )}
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -156,147 +150,6 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Key Spec Metrics: 4-Tier Calibration System */}
-                <div
-                  className={`p-2.5 rounded-xl border text-xs space-y-2.5 ${
-                    isBright
-                      ? 'bg-[#F8FAFC] border-[#E2E8F0]'
-                      : 'bg-neutral-900 border-neutral-800/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isBright ? 'text-slate-600' : 'text-neutral-400'}`}>
-                      Stage Weight Baselines (Wax + Metal)
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        Alert:
-                      </span>
-                      {isEditingThreshold ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            value={newThresholdValue}
-                            onChange={(e) => setNewThresholdValue(e.target.value)}
-                            className={`w-14 px-1 py-0.5 rounded border text-xs font-mono ${
-                              isBright
-                                ? 'bg-white border-amber-500 text-[#0F172A]'
-                                : 'bg-neutral-950 border-amber-500 text-neutral-100'
-                            }`}
-                          />
-                          <button
-                            onClick={() => handleSaveThreshold(design.id)}
-                            className="p-1 rounded bg-amber-400 text-neutral-950"
-                          >
-                            <Check className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setEditingThresholdId(design.id);
-                            setNewThresholdValue(design.lowStockThreshold.toString());
-                          }}
-                          className="font-mono font-bold text-xs text-amber-500 hover:underline flex items-center gap-0.5"
-                          title="Click to edit low stock threshold"
-                        >
-                          {design.lowStockThreshold} pcs
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-dashed border-neutral-700/40">
-                    <div>
-                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        Wax Stage
-                      </span>
-                      <span className="font-mono font-bold text-xs text-amber-500">
-                        {design.waxAvgWeightPerPiece > 0
-                          ? `${design.waxAvgWeightPerPiece.toFixed(4)} g`
-                          : 'Not calibrated'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className={`block text-[10px] ${isBright ? 'text-slate-500' : 'text-neutral-400'}`}>
-                        Metal / Post-Cast
-                      </span>
-                      <span className="font-mono font-bold text-xs text-blue-400">
-                        {design.metalAvgWeightPerPiece > 0
-                          ? `${design.metalAvgWeightPerPiece.toFixed(4)} g`
-                          : 'Not calibrated'}
-                      </span>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Recalibration Section */}
-                {isRecalibrating && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-neutral-900 border border-amber-500/40 space-y-2.5 text-xs">
-                    <div className="font-semibold text-amber-300 flex items-center justify-between">
-                      <span>Recalibrate Stage Baseline Weight</span>
-                      <button
-                        onClick={() => setRecalibratingDesignId(null)}
-                        className="text-neutral-400 hover:text-white"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] text-neutral-400 mb-1">
-                        Select Target Calibration Tier:
-                      </label>
-                      <SearchableSelect
-                        value={recalTarget}
-                        onChange={(value) => {
-                          const target = value as CalibrationTarget;
-                          setRecalTarget(target);
-                          const val = target === 'wax'
-                            ? design.waxAvgWeightPerPiece
-                            : design.metalAvgWeightPerPiece;
-                          setRecalWeight(val > 0 ? val.toFixed(4) : '');
-                          setRecalPieces(val > 0 ? '1' : '');
-                        }}
-                        searchPlaceholder="Search rulers…"
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-700 text-xs font-mono text-neutral-100 outline-none"
-                        options={[
-                          { value: 'wax', label: 'Wax Stage Baseline (waxAvgWeightPerPiece)' },
-                          { value: 'metal', label: 'Metal / Post-Cast Baseline (metalAvgWeightPerPiece)' },
-                        ]}
-                      />
-                    </div>
-
-                    <p className="text-[10px] text-neutral-400">
-                      Actual counted weight &divide; Actual counted pieces = New baseline saved for this specific stage tier.
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Counted Weight (g)"
-                        value={recalWeight}
-                        onChange={(e) => setRecalWeight(e.target.value)}
-                        className="px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-700 text-xs font-mono text-neutral-100 outline-none"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Counted Pieces"
-                        value={recalPieces}
-                        onChange={(e) => setRecalPieces(e.target.value)}
-                        className="px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-700 text-xs font-mono text-neutral-100 outline-none"
-                      />
-                    </div>
-                    <button
-                      onClick={() => handleSaveRecalibration(design.id)}
-                      className="w-full py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-xs transition"
-                    >
-                      Update {recalTarget.toUpperCase()} Baseline Weight
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Bottom Actions */}
@@ -305,23 +158,6 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
                   isBright ? 'border-[#E2E8F0]' : 'border-neutral-900'
                 }`}
               >
-                <button
-                  onClick={() => {
-                    setRecalibratingDesignId(design.id);
-                    setRecalTarget('wax');
-                    setRecalWeight(design.waxAvgWeightPerPiece > 0 ? design.waxAvgWeightPerPiece.toFixed(4) : '');
-                    setRecalPieces(design.waxAvgWeightPerPiece > 0 ? '1' : '');
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
-                    isBright
-                      ? 'bg-[#F1F5F9] hover:bg-[#E2E8F0] text-slate-700'
-                      : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
-                  }`}
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
-                  Recalibrate
-                </button>
-
                 <button
                   onClick={() => onOpenCreateLotWithDesign(design.id)}
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold transition active:scale-95 shadow-sm"
@@ -364,15 +200,31 @@ export const DesignsView: React.FC<DesignsViewProps> = ({
               </button>
             </div>
             <div className="flex items-center justify-center p-3 max-h-[calc(92vh-4.5rem)] overflow-auto">
-              <img
-                src={previewDesign.photoUrl}
-                alt={previewDesign.name}
-                className="max-w-full max-h-[calc(92vh-6rem)] object-contain rounded-lg"
-              />
+                {previewDesign.photoUrl && (
+                  <img
+                    src={previewDesign.photoUrl}
+                    alt={previewDesign.name}
+                    loading="eager"
+                    className="max-w-full max-h-[calc(92vh-6rem)] object-contain rounded-lg"
+                  />
+                )}
             </div>
           </div>
         </div>
       )}
+      <DeleteConfirmationModal
+        open={Boolean(deleteTarget)}
+        bright={isBright}
+        title={deleteTarget?.blocked ? 'Design cannot be deleted' : 'Delete design?'}
+        message={deleteTarget
+          ? deleteTarget.blocked
+            ? `${deleteTarget.design.name} is used by ${lots.filter((lot) => lot.designId === deleteTarget.design.id).length} production lot(s). Delete those lots first.`
+            : `Delete ${deleteTarget.design.name}? This permanently removes the design and its photo.`
+          : ''}
+        blocked={deleteTarget?.blocked}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={deleteTarget && !deleteTarget.blocked ? () => deleteDesign(deleteTarget.design.id) : undefined}
+      />
     </div>
   );
 };

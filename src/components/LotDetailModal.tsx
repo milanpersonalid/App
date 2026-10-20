@@ -50,19 +50,24 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
   );
   const [waxSamplePieces, setWaxSamplePieces] = React.useState('200');
   const [waxSampleWeight, setWaxSampleWeight] = React.useState('');
+  const [waxRulerOverride, setWaxRulerOverride] = React.useState<string | null>(null);
+  const [waxPiecesOverride, setWaxPiecesOverride] = React.useState<string | null>(null);
   const [waxReceiptError, setWaxReceiptError] = React.useState('');
   const [isSavingWaxReceipt, setIsSavingWaxReceipt] = React.useState(false);
   const needsWaxCalibration = Boolean(design && Number(design.waxAvgWeightPerPiece) <= 0);
   const existingWaxRuler = Number(design?.waxAvgWeightPerPiece) || 0;
   const samplePieceCount = Number(waxSamplePieces);
   const sampleWeight = Number(waxSampleWeight);
-  const previewWaxRuler = needsWaxCalibration && samplePieceCount > 0 && sampleWeight > 0
+  const designWaxRuler = needsWaxCalibration && samplePieceCount > 0 && sampleWeight > 0
     ? sampleWeight / samplePieceCount
     : existingWaxRuler;
+  const previewWaxRuler = waxRulerOverride === null ? designWaxRuler : Number(waxRulerOverride);
   const previewReceivedWeight = Number(waxReceivedWeight);
-  const previewEstimatedPieces = previewWaxRuler > 0 && previewReceivedWeight > 0
+  const calculatedWaxPieces = previewWaxRuler > 0 && previewReceivedWeight > 0
     ? Math.round(previewReceivedWeight / previewWaxRuler)
-    : null;
+    : 0;
+  const enteredWaxPieces = waxPiecesOverride === null ? calculatedWaxPieces : Number(waxPiecesOverride);
+  const previewEstimatedPieces = Number.isInteger(enteredWaxPieces) && enteredWaxPieces > 0 ? enteredWaxPieces : 0;
   const orderedQuantity = Number.parseInt(waxOrderedQuantity, 10) || 0;
   const visitedStages = new Set(lot.history.map((record) => record.stage));
   const furthestVisitedIndex = Math.max(-1, ...lot.history.map((record) => PRODUCTION_STAGE_ORDER.indexOf(record.stage)));
@@ -100,6 +105,14 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
       setWaxReceiptError('Enter a valid sample piece count and sample weight.');
       return;
     }
+    if (!Number.isFinite(previewWaxRuler) || previewWaxRuler <= 0) {
+      setWaxReceiptError('Enter a valid Wax weight per piece greater than 0.');
+      return;
+    }
+    if (previewEstimatedPieces <= 0) {
+      setWaxReceiptError('Enter a valid whole-number estimate of Wax pieces received.');
+      return;
+    }
 
     try {
       setIsSavingWaxReceipt(true);
@@ -109,6 +122,8 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
         statedPieces,
         samplePieceCount: needsWaxCalibration ? samplePieceCount : undefined,
         sampleWeight: needsWaxCalibration ? sampleWeight : undefined,
+        waxWeightPerPieceUsed: previewWaxRuler,
+        estimatedPieces: previewEstimatedPieces,
       });
       onClose();
     } catch (error) {
@@ -240,7 +255,6 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     step="0.001"
                     value={waxReceivedWeight}
                     onChange={(event) => setWaxReceivedWeight(event.target.value)}
-                    placeholder="e.g. 238.000"
                     className={`mt-1 w-full rounded-lg border px-3 py-2.5 outline-none focus:ring-2 focus:ring-violet-400 ${
                       isBright ? 'bg-white border-slate-300 text-slate-900' : 'bg-neutral-950 border-neutral-700 text-white'
                     }`}
@@ -255,7 +269,6 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                     step="1"
                     value={waxStatedPieces}
                     onChange={(event) => setWaxStatedPieces(event.target.value)}
-                    placeholder="From karigar slip"
                     className={`mt-1 w-full rounded-lg border px-3 py-2.5 outline-none focus:ring-2 focus:ring-violet-400 ${
                       isBright ? 'bg-white border-slate-300 text-slate-900' : 'bg-neutral-950 border-neutral-700 text-white'
                     }`}
@@ -298,28 +311,29 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                 </div>
               )}
 
-              {previewEstimatedPieces != null && (
-                <div className={`grid grid-cols-2 gap-3 rounded-lg border p-3 text-xs ${isBright ? 'bg-white border-violet-200' : 'bg-neutral-950 border-neutral-700'}`}>
-                  <div>
-                    <span className={isBright ? 'text-slate-500' : 'text-neutral-400'}>Estimated received</span>
-                    <strong className={`block font-mono text-base ${isBright ? 'text-slate-900' : 'text-white'}`}>{previewEstimatedPieces} pcs</strong>
-                  </div>
-                  <div>
-                    <span className={isBright ? 'text-slate-500' : 'text-neutral-400'}>Against order</span>
-                    <strong className={`block font-mono text-base ${
-                      previewEstimatedPieces < orderedQuantity ? 'text-red-500' : 'text-emerald-500'
-                    }`}>
-                      {orderedQuantity <= 0
-                        ? 'Enter order quantity'
-                        : previewEstimatedPieces < orderedQuantity
-                          ? `Short by ${orderedQuantity - previewEstimatedPieces}`
-                          : previewEstimatedPieces > orderedQuantity
-                            ? `Extra ${previewEstimatedPieces - orderedQuantity}`
-                            : 'Exact quantity'}
-                    </strong>
-                  </div>
+              <div className={`rounded-lg border p-3 text-xs space-y-3 ${isBright ? 'bg-emerald-50 border-emerald-200' : 'bg-emerald-950/20 border-emerald-800/50'}`}>
+                <div>
+                  <p className={`font-semibold ${isBright ? 'text-emerald-900' : 'text-emerald-300'}`}>Wax receipt estimate for this lot</p>
+                  <p className={`text-[10px] mt-0.5 ${isBright ? 'text-emerald-800/80' : 'text-emerald-200/70'}`}>Starts from the design’s saved weight per piece. Changes here apply only to this lot.</p>
                 </div>
-              )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={isBright ? 'text-emerald-900' : 'text-emerald-300'}>
+                    Wax weight per piece (g)
+                    <input type="number" min="0.0001" step="any" disabled={previewReceivedWeight <= 0} value={waxRulerOverride ?? (designWaxRuler > 0 ? String(designWaxRuler) : '')} onChange={(event) => { setWaxRulerOverride(event.target.value); setWaxPiecesOverride(null); }} className={`mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm outline-none disabled:opacity-60 ${isBright ? 'bg-white border-emerald-300 text-emerald-950' : 'bg-neutral-900 border-emerald-800 text-emerald-100'}`} />
+                  </label>
+                  <label className={isBright ? 'text-emerald-900' : 'text-emerald-300'}>
+                    Estimated pieces received
+                    <input type="number" min="1" step="1" disabled={previewReceivedWeight <= 0} value={waxPiecesOverride ?? (calculatedWaxPieces > 0 ? String(calculatedWaxPieces) : '')} onChange={(event) => setWaxPiecesOverride(event.target.value)} className={`mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm outline-none disabled:opacity-60 ${isBright ? 'bg-white border-emerald-300 text-emerald-950' : 'bg-neutral-900 border-emerald-800 text-emerald-100'}`} />
+                  </label>
+                </div>
+                <p className={isBright ? 'text-emerald-800' : 'text-emerald-200'}>
+                  {previewWaxRuler > 0 && previewReceivedWeight > 0 ? `${previewReceivedWeight} g ÷ ${previewWaxRuler.toFixed(4)} g/pc = ${calculatedWaxPieces} pcs${waxPiecesOverride !== null ? ' · piece count adjusted for this lot' : ''}` : 'Enter the total received weight to calculate and edit this lot’s estimate.'}
+                </p>
+                {(waxRulerOverride !== null || waxPiecesOverride !== null) && <button type="button" onClick={() => { setWaxRulerOverride(null); setWaxPiecesOverride(null); }} className={`font-semibold underline ${isBright ? 'text-emerald-800' : 'text-emerald-300'}`}>Reset to design estimate</button>}
+                {previewEstimatedPieces > 0 && orderedQuantity > 0 && <p className={`font-semibold ${previewEstimatedPieces < orderedQuantity ? 'text-red-500' : 'text-emerald-500'}`}>
+                  Against order: {previewEstimatedPieces < orderedQuantity ? `Short by ${orderedQuantity - previewEstimatedPieces}` : previewEstimatedPieces > orderedQuantity ? `Extra ${previewEstimatedPieces - orderedQuantity}` : 'Exact quantity'}
+                </p>}
+              </div>
 
               {waxReceiptError && (
                 <div className="text-xs text-red-600 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
@@ -450,6 +464,7 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
               <img
                 src={design.photoUrl}
                 alt={design.name}
+                loading="lazy"
                 className={`w-20 h-20 rounded-xl object-cover border flex-shrink-0 ${
                   isBright ? 'border-slate-200' : 'border-neutral-700'
                 }`}
@@ -660,6 +675,14 @@ export const LotDetailModal: React.FC<LotDetailModalProps> = ({
                         {rec.estimatedPieces !== undefined ? `${rec.estimatedPieces} pcs` : 'Pending'}
                       </span>
                     </div>
+                    {rec.stage === 'Wax' && rec.waxWeightPerPieceUsed !== undefined && (
+                      <div>
+                        <span className={isBright ? 'text-slate-500 block' : 'text-neutral-500 block'}>Wax Weight Per Piece Used</span>
+                        <span className={`font-mono font-bold ${isBright ? 'text-slate-900' : 'text-neutral-200'}`}>
+                          {rec.waxWeightPerPieceUsed.toFixed(4)} g/pc
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <span className={isBright ? 'text-slate-500 block' : 'text-neutral-500 block'}>
                         {rec.stage === 'Wax' ? 'Karigar Stated Pcs' : 'Good Received (Slip)'}

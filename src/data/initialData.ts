@@ -72,8 +72,8 @@ export const INITIAL_DESIGNS: Design[] = [
     barcode: 'DES-108501',
     waxAvgWeightPerPiece: 0.22, // 22g wax / 100pcs
     metalAvgWeightPerPiece: 1.62, // 162g raw metal / 100pcs
-    plainAvgWeightPerPiece: 1.48, // after filing for plain
-    goldAvgWeightPerPiece: 1.54, // after filing for gold plating
+    buffAvgWeightPerPiece: 1.48, // after filing for plain
+    zaboraAvgWeightPerPiece: 1.54, // after filing for gold plating
     fingerprint: {
       dominantHue: 42,
       avgBrightness: 165,
@@ -95,8 +95,8 @@ export const INITIAL_DESIGNS: Design[] = [
     barcode: 'DES-108502',
     waxAvgWeightPerPiece: 0.30,
     metalAvgWeightPerPiece: 2.20,
-    plainAvgWeightPerPiece: 2.02,
-    goldAvgWeightPerPiece: 2.10,
+    buffAvgWeightPerPiece: 2.02,
+    zaboraAvgWeightPerPiece: 2.10,
     fingerprint: {
       dominantHue: 48,
       avgBrightness: 155,
@@ -118,8 +118,8 @@ export const INITIAL_DESIGNS: Design[] = [
     barcode: 'DES-108503',
     waxAvgWeightPerPiece: 0.18,
     metalAvgWeightPerPiece: 1.30,
-    plainAvgWeightPerPiece: 1.18,
-    goldAvgWeightPerPiece: 1.23,
+    buffAvgWeightPerPiece: 1.18,
+    zaboraAvgWeightPerPiece: 1.23,
     fingerprint: {
       dominantHue: 38,
       avgBrightness: 170,
@@ -141,8 +141,8 @@ export const INITIAL_DESIGNS: Design[] = [
     barcode: 'DES-108504',
     waxAvgWeightPerPiece: 0.26,
     metalAvgWeightPerPiece: 1.85,
-    plainAvgWeightPerPiece: 0,
-    goldAvgWeightPerPiece: 0,
+    buffAvgWeightPerPiece: 0,
+    zaboraAvgWeightPerPiece: 0,
     fingerprint: {
       dominantHue: 35,
       avgBrightness: 145,

@@ -42,7 +42,7 @@ export const PRODUCTION_STAGE_ORDER: Stage[] = [
 
 export type BranchType = 'none' | 'plain' | 'gold';
 
-export type CalibrationTarget = 'wax' | 'metal';
+export type CalibrationTarget = 'wax' | 'metal' | 'buff' | 'zabora';
 
 /** How a karigar's job-work rate is charged for a particular stage. */
 export type JobWorkRateBasis = 'per_piece' | 'per_kg' | 'flat';
@@ -76,10 +76,8 @@ export interface Design {
   barcode: string;           // permanent barcode, e.g. "DES-82910"
   waxAvgWeightPerPiece: number;   // established at Wax stage
   metalAvgWeightPerPiece: number; // established at/after Casting stage (heavier cast metal)
-  /** Legacy Supabase columns retained for compatibility; no longer used as calibration rulers. */
-  plainAvgWeightPerPiece: number;
-  /** Legacy Supabase columns retained for compatibility; no longer used as calibration rulers. */
-  goldAvgWeightPerPiece: number;
+  buffAvgWeightPerPiece: number;   // established at Buff stage
+  zaboraAvgWeightPerPiece: number; // established at Zabora stage
   fingerprint?: VisualFingerprint;
   createdAt: string;
   updatedAt: string;
@@ -109,6 +107,7 @@ export interface LotStageRecord {
 
   // Step 6: Manual data entry
   weightReceived?: number;   // grams
+  waxWeightPerPieceUsed?: number; // Wax grams per piece used for this lot's receipt estimate
   estimatedPieces?: number;  // weightReceived / averageWeightPerPiece
   statedPieces?: number;     // entered from karigar slip
   hasDiscrepancy?: boolean;  // discrepancy warning triggered

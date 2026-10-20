@@ -137,7 +137,6 @@ export const LoginScreen: React.FC = () => {
                   type="text"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="Enter your name..."
                   className={`w-full pl-9 pr-3 py-2 rounded-xl border text-xs focus:border-[#E07A5F] outline-none ${isBright ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]' : 'bg-[#292930] border-[#3F3F46] text-[#F4F4F6]'}`}
                   required
                 />
@@ -154,7 +153,6 @@ export const LoginScreen: React.FC = () => {
                 type="text"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="Enter user email..."
                 className={`w-full pl-9 pr-3 py-2 rounded-xl border text-xs focus:border-[#E07A5F] outline-none ${
                   isBright
                     ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'
@@ -175,7 +173,6 @@ export const LoginScreen: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Enter password..."
                 className={`w-full pl-9 pr-10 py-2 rounded-xl border text-xs focus:border-[#E07A5F] outline-none ${
                   isBright
                     ? 'bg-[#FFFFFF] border-[#D4D4D8] text-[#27272A]'

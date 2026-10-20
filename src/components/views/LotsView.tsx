@@ -16,7 +16,11 @@ import {
   Clock,
   AlertCircle,
   Sparkles,
+  Trash2,
+  X,
+  Pencil,
 } from 'lucide-react';
+import { DeleteConfirmationModal } from '../DeleteConfirmationModal';
 
 interface LotsViewProps {
   onOpenCreateLot: () => void;
@@ -24,6 +28,7 @@ interface LotsViewProps {
   onOpenStep6: (lot: Lot, design: Design) => void;
   onOpenStep7: (lot: Lot) => void;
   onOpenLot: (lot: Lot) => void;
+  onOpenEditLot: (lot: Lot) => void;
 }
 
 export const LotsView: React.FC<LotsViewProps> = ({
@@ -32,14 +37,17 @@ export const LotsView: React.FC<LotsViewProps> = ({
   onOpenStep6,
   onOpenStep7,
   onOpenLot,
+  onOpenEditLot,
 }) => {
-  const { lots, designs, confirmArrival } = useApp();
+  const { lots, designs, confirmArrival, deleteLot } = useApp();
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deleteTarget, setDeleteTarget] = useState<Lot | null>(null);
+  const [previewDesign, setPreviewDesign] = useState<Design | null>(null);
 
 
   const lotCreatedTime = (lot: Lot) => {
@@ -100,7 +108,6 @@ export const LotsView: React.FC<LotsViewProps> = ({
             />
             <input
               type="text"
-              placeholder="Search lot #, design, Karigar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full pl-9 pr-3 py-2 rounded-xl border text-xs outline-none transition ${
@@ -117,7 +124,6 @@ export const LotsView: React.FC<LotsViewProps> = ({
               value={stageFilter}
               onChange={setStageFilter}
               bright={isBright}
-              searchPlaceholder="Search stages…"
               className={`px-2.5 py-1.5 rounded-lg border text-xs outline-none transition ${
                 isBright
                   ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
@@ -133,7 +139,6 @@ export const LotsView: React.FC<LotsViewProps> = ({
               value={statusFilter}
               onChange={setStatusFilter}
               bright={isBright}
-              searchPlaceholder="Search statuses…"
               className={`px-2.5 py-1.5 rounded-lg border text-xs outline-none transition ${
                 isBright
                   ? 'bg-[#F8FAFC] border-[#CBD5E1] text-[#0F172A] focus:border-amber-500'
@@ -167,7 +172,6 @@ export const LotsView: React.FC<LotsViewProps> = ({
         ) : (
           filteredLots.map((lot) => {
             const design = designs.find((d) => d.id === lot.designId);
-            const lastRec = lot.history[lot.history.length - 1];
 
             const isAwaitingWaxReceipt = lot.status === 'awaiting_wax_receipt';
             const isArrivedAwaitingEntry = lot.status === 'arrived_awaiting_entry';
@@ -177,8 +181,8 @@ export const LotsView: React.FC<LotsViewProps> = ({
 
             return (
               <div
-                key={lot.id}
-                className={`p-3 rounded-xl border transition flex flex-col justify-between gap-3 shadow-sm ${
+                  key={lot.id}
+                  className={`relative p-3 rounded-xl border transition flex flex-col justify-between gap-3 shadow-sm ${
                   isAwaitingWaxReceipt
                     ? isBright
                       ? 'bg-violet-50/60 border-violet-300 hover:border-violet-400'
@@ -186,18 +190,49 @@ export const LotsView: React.FC<LotsViewProps> = ({
                     : isBright
                     ? 'bg-white border-[#E4E4E7] hover:border-slate-300'
                     : 'bg-neutral-950 border-neutral-800 hover:border-neutral-700'
-                }`}
-              >
+                  }`}
+                >
+                <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditLot(lot)}
+                    title="Edit lot"
+                    aria-label={`Edit lot ${lot.lotNumber}`}
+                    className="p-0.5 text-amber-500/70 hover:text-amber-400 transition"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(lot)}
+                    title="Delete lot"
+                    aria-label={`Delete lot ${lot.lotNumber}`}
+                    className="p-0.5 text-red-500/65 hover:text-red-500 transition"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
                 {/* Left info */}
-                <div className="flex items-center gap-4 min-w-0">
+                <div className="flex items-center gap-4 min-w-0 pr-12">
                   {design && (
-                    <img
-                      src={design.photoUrl}
-                      alt={design.name}
-                      className={`w-14 h-14 rounded-xl object-cover border flex-shrink-0 ${
-                        isBright ? 'border-slate-200' : 'border-neutral-700'
-                      }`}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDesign(design)}
+                      className="flex-shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      aria-label={`View larger image of ${design.name}`}
+                      title="View image"
+                    >
+                        {design.photoUrl && (
+                          <img
+                            src={design.photoUrl}
+                            alt={design.name}
+                            loading="lazy"
+                            className={`w-14 h-14 rounded-xl object-cover border ${
+                              isBright ? 'border-slate-200' : 'border-neutral-700'
+                            }`}
+                          />
+                        )}
+                    </button>
                   )}
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -261,66 +296,14 @@ export const LotsView: React.FC<LotsViewProps> = ({
                     </div>
 
                     <div
-                      className={`flex items-center gap-3 text-[11px] flex-wrap ${
+                      className={`text-[11px] ${
                         isBright ? 'text-slate-500' : 'text-neutral-400'
                       }`}
                     >
-                      <span>
-                        Karigar:{' '}
-                        <strong
-                          className={isBright ? 'text-slate-900' : 'text-neutral-200'}
-                        >
-                          {lot.currentKarigarName}
-                        </strong>
-                      </span>
-                      <span>&bull;</span>
-                      <span>
-                        {isAwaitingWaxReceipt ? 'Ordered:' : lot.currentStage === 'Wax' ? 'Received:' : 'Sent:'}{' '}
-                        <strong
-                          className={`font-mono ${
-                            isBright ? 'text-slate-900' : 'text-neutral-200'
-                          }`}
-                        >
-                          {isAwaitingWaxReceipt
-                            ? `${lastRec?.orderedQuantity ?? '—'} pcs`
-                            : `${lot.currentStage === 'Wax' ? (lastRec?.weightReceived ?? lot.initialWeight) : (lastRec?.weightSent ?? lot.initialWeight)}g`}
-                        </strong>
-                      </span>
-                      <span>&bull;</span>
-                      <span>
-                        {isAwaitingWaxReceipt ? 'Wax receipt:' : lot.currentStage === 'Wax' ? 'Estimated pcs:' : 'Pcs:'}{' '}
-                        <strong
-                          className={`font-mono ${
-                            isBright ? 'text-slate-900' : 'text-neutral-200'
-                          }`}
-                        >
-                          {isAwaitingWaxReceipt ? 'Pending' : lot.currentStage === 'Wax' ? (lastRec?.estimatedPieces ?? lot.initialPieces) : (lastRec?.piecesSent ?? lot.initialPieces)}
-                        </strong>
-                      </span>
-                      {!isAwaitingWaxReceipt && lot.currentStage === 'Wax' && lastRec?.orderedQuantity != null && (
-                        <>
-                          <span>&bull;</span>
-                          <span>
-                            Ordered: <strong className="font-mono">{lastRec.orderedQuantity}</strong>
-                          </span>
-                          <span>&bull;</span>
-                          <span className={`font-mono font-semibold ${lastRec.orderedQuantity > (lastRec.estimatedPieces ?? lot.initialPieces) ? 'text-amber-500' : 'text-emerald-500'}`}>
-                            {lastRec.orderedQuantity > (lastRec.estimatedPieces ?? lot.initialPieces)
-                              ? `Short ${lastRec.orderedQuantity - (lastRec.estimatedPieces ?? lot.initialPieces)}`
-                              : lastRec.orderedQuantity < (lastRec.estimatedPieces ?? lot.initialPieces)
-                                ? `Extra ${(lastRec.estimatedPieces ?? lot.initialPieces) - lastRec.orderedQuantity}`
-                                : 'Exact'}
-                          </span>
-                        </>
-                      )}
-                      {lot.currentStage !== 'Wax' && lastRec?.weightLoss !== undefined && (
-                        <>
-                          <span>&bull;</span>
-                          <span className="text-amber-500 font-mono font-semibold">
-                            Loss: {lastRec.weightLoss}g ({lastRec.lossPercentage}%)
-                          </span>
-                        </>
-                      )}
+                      Karigar:{' '}
+                      <strong className={isBright ? 'text-slate-900' : 'text-neutral-200'}>
+                        {lot.currentKarigarName}
+                      </strong>
                     </div>
                   </div>
                 </div>
@@ -385,6 +368,55 @@ export const LotsView: React.FC<LotsViewProps> = ({
           })
         )}
       </div>
+      <DeleteConfirmationModal
+        open={Boolean(deleteTarget)}
+        bright={isBright}
+        title="Delete lot?"
+        message={deleteTarget ? `Delete lot ${deleteTarget.lotNumber}? This permanently removes its production history.` : ''}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={deleteTarget ? () => deleteLot(deleteTarget.id) : undefined}
+      />
+      {previewDesign && (
+        <div
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPreviewDesign(null);
+          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${previewDesign.name} design image`}
+            className="relative w-full max-w-4xl max-h-[92vh] rounded-2xl overflow-hidden bg-neutral-950 border border-neutral-700 shadow-2xl"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm text-white truncate">{previewDesign.name}</h3>
+                <p className="text-xs text-neutral-400 font-mono">{previewDesign.barcode}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDesign(null)}
+                className="p-2 ml-3 rounded-lg text-neutral-300 hover:text-white hover:bg-neutral-800"
+                aria-label="Close image preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex items-center justify-center p-3 max-h-[calc(92vh-4.5rem)] overflow-auto">
+              {previewDesign.photoUrl && (
+                <img
+                  src={previewDesign.photoUrl}
+                  alt={previewDesign.name}
+                  loading="eager"
+                  className="max-w-full max-h-[calc(92vh-6rem)] object-contain rounded-lg"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

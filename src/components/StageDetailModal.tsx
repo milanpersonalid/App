@@ -204,7 +204,7 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                 <div>
                   <h4 className="text-sm font-bold">New Karigar</h4>
                   <p className={`mt-1 text-xs ${isBright ? 'text-stone-600' : 'text-neutral-400'}`}>
-                    {stage} is selected. Add any other stages this karigar can work in.
+                    Select any work stages this karigar can handle, including or excluding {stage}.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -216,7 +216,6 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                       onChange={(event) => setName(event.target.value)}
                       required
                       maxLength={100}
-                      placeholder="Karigar name"
                       className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-amber-500 ${isBright ? 'border-stone-300 bg-white text-stone-900' : 'border-neutral-700 bg-neutral-900 text-white'}`}
                     />
                   </label>
@@ -227,7 +226,6 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                       value={phone}
                       onChange={(event) => setPhone(event.target.value)}
                       maxLength={20}
-                      placeholder="+91 90000 00000"
                       className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-amber-500 ${isBright ? 'border-stone-300 bg-white text-stone-900' : 'border-neutral-700 bg-neutral-900 text-white'}`}
                     />
                   </label>
@@ -245,7 +243,6 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                           type="checkbox"
                           checked={specialtyStages.includes(specialty)}
                           onChange={() => toggleSpecialty(specialty)}
-                          disabled={specialty === stage}
                           className="sr-only"
                         />
                         {specialty}
@@ -388,7 +385,7 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                               onClick={() => startEditingStages(karigar.id, karigar.specialtyStages)}
                               className={`mb-3 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-semibold ${isBright ? 'border-stone-300 bg-white text-stone-700 hover:bg-stone-100' : 'border-neutral-700 bg-neutral-800 text-neutral-200 hover:bg-neutral-700'}`}
                             >
-                              <Pencil className="h-3 w-3" /> Edit Work Stages
+                              <Pencil className="h-3 w-3" /> Edit Karigar Details
                             </button>
                           )}
                           {assignments.length === 0 ? (
@@ -416,7 +413,7 @@ export const StageDetailModal: React.FC<StageDetailModalProps> = ({
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="flex items-center gap-3 min-w-0">
                                         {design && (
-                                          <img src={design.photoUrl} alt={design.name} className="w-11 h-11 rounded-lg object-cover border border-neutral-700/40 shrink-0" />
+                                          <img src={design.photoUrl} alt={design.name} loading="lazy" className="w-11 h-11 rounded-lg object-cover border border-neutral-700/40 shrink-0" />
                                         )}
                                         <div className="min-w-0">
                                           <div className="font-bold text-xs truncate">{lot.designName}</div>

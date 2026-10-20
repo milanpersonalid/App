@@ -12,7 +12,6 @@ import {
   Users,
   Clock,
   Printer,
-  ChevronRight,
   Search,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -112,99 +111,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12 overflow-x-hidden w-full max-w-full">
-      {/* LUXURY WORKSHOP SEARCH & FILTER */}
-      <div className="pt-0.5">
-        {/* SEARCH & FILTER BAR */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex-1 relative">
-            <Search
-              className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                isBright ? 'text-[#A8A29E]' : 'text-[#78716C]'
-              }`}
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search lot, karigar or stage..."
-              className={`w-full pl-10 pr-9 py-3 rounded-2xl text-sm font-sans transition-all duration-200 shadow-sm focus:outline-none ${
-                isBright
-                  ? 'bg-white border border-[#E7E5E4] text-[#1C1917] placeholder-[#A8A29E] focus:border-[#C5A059] focus:ring-2 focus:ring-[#C5A059]/20'
-                  : 'bg-[#292623] border border-[#44403C] text-[#F5F5F4] placeholder-[#78716C] focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20'
-              }`}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold w-5 h-5 rounded-full bg-black/10 hover:bg-black/20 text-stone-500 flex items-center justify-center transition"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            title="Filter Lots & Stages"
-            className={`p-3 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-sm transition active:scale-95 ${
-              isFilterOpen || activeFilter !== 'all'
-                ? 'bg-[#C5A059] text-white shadow-md shadow-[#C5A059]/30'
-                : isBright
-                ? 'bg-[#D4C3AC] hover:bg-[#C8B399] text-[#292524]'
-                : 'bg-[#3E3832] hover:bg-[#4D453E] text-[#D8C7B0]'
-            }`}
-          >
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Filter Quick-Select Pills */}
-        {isFilterOpen && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-3 animate-in fade-in slide-in-from-top-1 duration-150">
-            {(
-              [
-                { key: 'all', label: 'All Lots' },
-                { key: 'awaiting_entry', label: `Awaiting Entry (${awaitingEntryLots.length})` },
-                { key: 'stage_complete', label: `Stage Done (${stageCompleteLots.length})` },
-                { key: 'in_progress', label: `In Progress (${inProgressLots.length})` },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setActiveFilter(item.key)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
-                  activeFilter === item.key
-                    ? 'bg-[#C5A059] text-white shadow-sm'
-                    : isBright
-                    ? 'bg-white border border-[#E7E5E4] text-[#57534E] hover:bg-stone-50'
-                    : 'bg-[#292623] border border-[#44403C] text-stone-300 hover:bg-[#34302C]'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Active Search Result Badge */}
-        {q && (
-          <div className="flex items-center justify-between mt-2.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs">
-            <span className="text-amber-800 dark:text-amber-200">
-              Showing results for &ldquo;<strong>{searchQuery}</strong>&rdquo;
-            </span>
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="text-amber-700 dark:text-amber-300 font-semibold hover:underline"
-            >
-              Clear
-            </button>
-          </div>
-        )}
-      </div>
       {/* ACTION QUEUE: STEP 5 SCAN ARRIVAL AWAITING MANUAL DATA ENTRY (RED STATUS) */}
       {filteredAwaitingLots.length > 0 && (
         <div
@@ -212,11 +118,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             isBright ? 'bg-rose-50/70 border-rose-200' : 'bg-red-950/30 border-red-500/40'
           }`}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E07A5F] animate-ping" />
               <h3
-                className={`font-bold text-xs uppercase tracking-wider font-brand ${
+                className={`font-bold text-xs uppercase tracking-wider leading-snug font-brand ${
                   isBright ? 'text-[#C86349]' : 'text-red-300'
                 }`}
               >
@@ -309,20 +215,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             isBright ? 'bg-emerald-50/70 border-emerald-200' : 'bg-emerald-950/30 border-emerald-500/40'
           }`}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
               <h3
-                className={`font-bold text-xs uppercase tracking-wider font-brand ${
+                className={`font-bold text-xs uppercase tracking-wider leading-snug font-brand ${
                   isBright ? 'text-emerald-800' : 'text-emerald-300'
                 }`}
               >
                 Stage Completed — Ready for Next Stage ({filteredStageCompleteLots.length} Lots)
               </h3>
             </div>
-            <span className={`text-[11px] ${isBright ? 'text-[#71717A]' : 'text-neutral-400'}`}>
-              Manual advancement required &bull; Dynamic QR regenerated at transition
-            </span>
           </div>
 
           <div className="flex flex-col gap-2.5">
@@ -442,7 +345,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* 2-COLUMN GRID (2 STAGES PER ROW) */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             {filteredStages.map((stage) => {
-            const { working, idle } = getKarigarStatusForStage(stage);
+            const { working } = getKarigarStatusForStage(stage);
             const stageLots = lots.filter(
               (l) => l.currentStage === stage && l.status !== 'ready_stock'
             );
@@ -492,7 +395,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     )}
                   </div>
 
-                  {/* SPEC SPECIFIC LIVE COUNT: "X working / Y idle" */}
+                  {/* Live working count */}
                   <div
                     className={`mt-2 p-2 rounded-xl border flex flex-col gap-0.5 ${
                       isBright
@@ -507,16 +410,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           isBright ? 'text-[#27272A]' : 'text-neutral-200'
                         }`}
                       >
-                        {working.length} working &bull; {idle.length} idle
+                        {working.length} working
                       </span>
                     </div>
-                    <span
-                      className={`text-[9px] font-mono ${
-                        isBright ? 'text-[#71717A]' : 'text-neutral-400'
-                      }`}
-                    >
-                      {working.length + idle.length} assigned karigars
-                    </span>
                   </div>
 
                   {/* Lots in this Stage */}
@@ -552,17 +448,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   )}
                 </div>
 
-                {/* Bottom detail action */}
-                <div
-                  className={`pt-2.5 mt-2.5 border-t flex items-center justify-between text-[10px] sm:text-[11px] transition ${
-                    isBright
-                      ? 'border-[#E4E4E7] text-[#71717A] group-hover:text-[#E07A5F]'
-                      : 'border-[#3F3F46] text-neutral-400 group-hover:text-[#E8998D]'
-                  }`}
-                >
-                  <span className="font-medium">View Stage</span>
-                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition shrink-0" />
-                </div>
               </div>
             );
           })}

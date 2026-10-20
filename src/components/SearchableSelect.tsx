@@ -24,8 +24,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   onChange,
   className = '',
-  placeholder = 'Select an option…',
-  searchPlaceholder = 'Type to search…',
+  placeholder = '',
+  searchPlaceholder = '',
   disabled = false,
   bright = false,
   ariaLabel,
@@ -94,7 +94,6 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             setQuery(event.target.value);
             setOpen(true);
           }}
-          placeholder={searchPlaceholder}
           aria-label={ariaLabel ? `Search ${ariaLabel}` : searchPlaceholder}
           className={`w-24 sm:w-32 min-w-0 px-2 py-2 rounded-lg border outline-none text-xs focus:border-amber-500 ${
             bright ? 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400' : 'bg-neutral-950 border-neutral-700 text-neutral-100 placeholder:text-neutral-500'

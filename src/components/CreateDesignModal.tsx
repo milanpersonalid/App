@@ -17,23 +17,25 @@ import { getSampleRingPhoto } from '../data/initialData';
 interface CreateDesignModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  editingDesign?: import('../types').Design;
 }
 
 export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
   onClose,
   onSuccess,
+  editingDesign,
 }) => {
-  const { createDesign } = useApp();
+  const { createDesign, editDesign } = useApp();
   const { theme } = useAuthAndTheme();
   const isBright = theme === 'bright';
 
   const generateDesignCode = () =>
     `DSG-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
 
-  const [name, setName] = useState('');
-  const [orderRef, setOrderRef] = useState<string>(generateDesignCode);
-  const [lowStockThreshold, setLowStockThreshold] = useState<string>('500'); // default 500
-  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [name, setName] = useState(editingDesign?.name ?? '');
+  const [orderRef, setOrderRef] = useState<string>(editingDesign?.orderRef ?? generateDesignCode());
+  const [lowStockThreshold, setLowStockThreshold] = useState<string>(String(editingDesign?.lowStockThreshold ?? 500));
+  const [photoUrl, setPhotoUrl] = useState<string>(editingDesign?.photoUrl ?? '');
   const [photoFile, setPhotoFile] = useState<File | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -61,14 +63,12 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
     setError('');
 
     try {
-      const finalPhoto = photoUrl || getSampleRingPhoto(name || 'Custom Ring');
-      await createDesign({
-        name: name.trim(),
-        orderRef: orderRef.trim(),
-        photoUrl: finalPhoto,
-        photoFile,
-        lowStockThreshold: parseInt(lowStockThreshold, 10) || 500,
-      });
+      if (editingDesign) {
+        await editDesign(editingDesign.id, { name: name.trim(), orderRef: orderRef.trim(), lowStockThreshold: parseInt(lowStockThreshold, 10) || 500, photoFile });
+      } else {
+        const finalPhoto = photoUrl || getSampleRingPhoto(name || 'Custom Ring');
+        await createDesign({ name: name.trim(), orderRef: orderRef.trim(), photoUrl: finalPhoto, photoFile, lowStockThreshold: parseInt(lowStockThreshold, 10) || 500 });
+      }
 
       onSuccess();
     } catch (err: any) {
@@ -110,7 +110,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
                   isBright ? 'text-[#18181B]' : 'text-white'
                 }`}
               >
-                Create Design
+                {editingDesign ? 'Edit Design' : 'Create Design'}
               </h3>
             </div>
           </div>
@@ -156,7 +156,6 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. Royal Kundan Floral Solitaire Ring"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium outline-none transition ${
@@ -189,7 +188,6 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. DSG-2024-501 or FS-101"
                   value={orderRef}
                   onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
                   className={`w-full pl-3.5 pr-10 py-2.5 rounded-xl border font-mono text-sm uppercase outline-none font-semibold transition ${
@@ -364,7 +362,7 @@ export const CreateDesignModal: React.FC<CreateDesignModalProps> = ({
               className="px-5 py-2.5 text-xs font-bold rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-neutral-950 shadow-md shadow-amber-500/20 transition flex items-center gap-2 disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
-              <span>{isSubmitting ? 'Saving Design...' : 'Save Design & Generate Barcode'}</span>
+              <span>{isSubmitting ? 'Saving Design...' : editingDesign ? 'Save Design Changes' : 'Save Design & Generate Barcode'}</span>
             </button>
           </div>
         </form>

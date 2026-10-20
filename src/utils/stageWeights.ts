@@ -2,9 +2,11 @@ import { Stage, BranchType, Design } from '../types';
 
 export type StageWeightKey =
   | 'waxAvgWeightPerPiece'
-  | 'metalAvgWeightPerPiece';
+  | 'metalAvgWeightPerPiece'
+  | 'buffAvgWeightPerPiece'
+  | 'zaboraAvgWeightPerPiece';
 
-export type CalibrationTarget = 'wax' | 'metal';
+export type CalibrationTarget = 'wax' | 'metal' | 'buff' | 'zabora';
 
 /**
  * Returns which weight-per-piece field to use for estimating pieces / reference at a given stage.
@@ -12,9 +14,8 @@ export type CalibrationTarget = 'wax' | 'metal';
  * Stage Table:
  * - Wax: waxAvgWeightPerPiece
  * - Casting: metalAvgWeightPerPiece
- * - Buff, Zabora, Dull: metalAvgWeightPerPiece
- * - Chhol and Plating use the shared metal ruler; the branch affects routing, not calibration.
- * - Ready Stock uses the same metal ruler for piece estimation.
+ * - Buff: buffAvgWeightPerPiece
+ * - Zabora, Dull, Chhol, Plating, Ready Stock: zaboraAvgWeightPerPiece
  */
 export function getStageWeightKey(stage: Stage, branch: BranchType = 'none'): StageWeightKey {
   switch (stage) {
@@ -23,12 +24,13 @@ export function getStageWeightKey(stage: Stage, branch: BranchType = 'none'): St
     case 'Casting':
       return 'metalAvgWeightPerPiece';
     case 'Buff':
+      return 'buffAvgWeightPerPiece';
     case 'Zabora':
     case 'Dull':
     case 'Chhol':
     case 'Plating':
     case 'Ready Stock':
-      return 'metalAvgWeightPerPiece';
+      return 'zaboraAvgWeightPerPiece';
     default:
       return 'metalAvgWeightPerPiece';
   }
@@ -44,15 +46,15 @@ export function getStageWeightLabel(stage: Stage, branch: BranchType = 'none'): 
     case 'Casting':
       return 'Metal Avg Wt';
     case 'Buff':
+      return 'Buff Avg Wt';
     case 'Zabora':
     case 'Dull':
-      return 'Metal Avg Wt';
+      return 'Zabora Avg Wt';
     case 'Chhol':
-      return 'Metal Avg Wt';
+      return 'Zabora Avg Wt';
     case 'Plating':
-      return 'Metal Avg Wt';
     case 'Ready Stock':
-      return 'Metal Avg Wt';
+      return 'Zabora Avg Wt';
     default:
       return 'Avg Wt';
   }
@@ -101,16 +103,17 @@ export function isStageRulerSet(
  * At every stage in the factory, the piece count is calculated automatically:
  * estimated pieces = weight entered ÷ stage ruler.
  */
-export function isWeightEstimationApplicable(_stage?: Stage): boolean {
-  return true;
+export function isWeightEstimationApplicable(stage?: Stage): boolean {
+  return stage !== 'Chhol';
 }
 
 /**
  * Returns the default calibration target to establish or update when completing this stage.
  * - Wax -> wax
- * - Casting -> metal (establishes metal average for the first time or recalibrates)
- * - Buff, Zabora, Dull -> metal
- * - Chhol and Plating -> metal
+ * - Casting -> metal
+ * - Buff -> buff
+ * - Zabora -> zabora
+ * - Dull, Chhol, Plating, Ready Stock -> zabora
  */
 export function getDefaultCalibrationTarget(
   stage: Stage,
@@ -122,12 +125,13 @@ export function getDefaultCalibrationTarget(
     case 'Casting':
       return 'metal';
     case 'Buff':
+      return 'buff';
     case 'Zabora':
+      return 'zabora';
     case 'Dull':
-      return 'metal';
     case 'Plating':
     case 'Chhol':
     default:
-      return 'metal';
+      return 'zabora';
   }
 }

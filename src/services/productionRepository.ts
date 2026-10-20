@@ -1,6 +1,6 @@
 import { Design, Karigar, Lot, LotStageRecord } from '../types';
 import { requireSupabase } from '../lib/supabase';
-import { getDesignPhotoUrl, getDesignPhotoUrls } from './designImageStorage';
+import { getDesignPhotoUrls } from './designImageStorage';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -22,15 +22,17 @@ export const designFromRow = async (row: any, resolvedPhotoUrl?: string): Promis
     id: row.id,
     name: row.name,
     orderRef: row.order_ref,
-    photoUrl: photoStoragePath ? (resolvedPhotoUrl ?? await getDesignPhotoUrl(photoStoragePath)) : storedPhoto,
+    // Do not block the whole production-data load on private image URL resolution.
+    // AppContext hydrates these URLs after the design records are visible.
+    photoUrl: photoStoragePath ? (resolvedPhotoUrl ?? '') : storedPhoto,
     photoStoragePath,
     targetQuantity: row.target_quantity ?? undefined,
     lowStockThreshold: row.low_stock_threshold,
     barcode: row.barcode,
     waxAvgWeightPerPiece: Number(row.wax_avg_weight_per_piece),
     metalAvgWeightPerPiece: Number(row.metal_avg_weight_per_piece),
-    plainAvgWeightPerPiece: Number(row.plain_avg_weight_per_piece),
-    goldAvgWeightPerPiece: Number(row.gold_avg_weight_per_piece),
+    buffAvgWeightPerPiece: Number(row.buff_avg_weight_per_piece),
+    zaboraAvgWeightPerPiece: Number(row.zabora_avg_weight_per_piece),
     fingerprint: row.fingerprint ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -47,8 +49,8 @@ const designToRow = (design: Design): JsonRecord => ({
   barcode: design.barcode,
   wax_avg_weight_per_piece: design.waxAvgWeightPerPiece,
   metal_avg_weight_per_piece: design.metalAvgWeightPerPiece,
-  plain_avg_weight_per_piece: design.plainAvgWeightPerPiece,
-  gold_avg_weight_per_piece: design.goldAvgWeightPerPiece,
+  buff_avg_weight_per_piece: design.buffAvgWeightPerPiece,
+  zabora_avg_weight_per_piece: design.zaboraAvgWeightPerPiece,
   // Legacy columns are retained in the database but are no longer collected.
   sample_weight: 0,
   sample_piece_count: 0,
@@ -158,16 +160,18 @@ export async function fetchProductionData() {
   throwIfError(karigarResult.error);
 
   const designRows = designResult.data ?? [];
-  const storagePaths = designRows
-    .map((row) => String(row.photo_url ?? ''))
-    .filter((path) => path && !path.startsWith('data:') && !/^https?:\/\//i.test(path));
-  const photoUrls = await getDesignPhotoUrls(storagePaths);
-
   return {
-    designs: await Promise.all(designRows.map((row) => designFromRow(row, photoUrls.get(String(row.photo_url ?? ''))))),
+    designs: await Promise.all(designRows.map((row) => designFromRow(row))),
     lots: (lotResult.data ?? []).map(lotFromRow),
     karigars: (karigarResult.data ?? []).map(karigarFromRow),
   };
+}
+
+export async function resolveDesignPhotoUrls(designs: Design[]): Promise<Map<string, string>> {
+  const storagePaths = designs
+    .map((design) => design.photoStoragePath ?? '')
+    .filter(Boolean);
+  return getDesignPhotoUrls(storagePaths);
 }
 
 export async function insertDesign(design: Design): Promise<Design> {
@@ -189,6 +193,14 @@ export async function updateDesign(design: Design): Promise<Design> {
     .single();
   throwIfError(error);
   return designFromRow(data);
+}
+
+export async function deleteDesignRecord(designId: string): Promise<void> {
+  const { error } = await requireSupabase()
+    .from('designs')
+    .delete()
+    .eq('id', designId);
+  throwIfError(error);
 }
 
 export async function insertLot(lot: Lot): Promise<Lot> {
@@ -240,6 +252,14 @@ export async function updateLot(lot: Lot): Promise<Lot> {
     .single();
   throwIfError(error);
   return lotFromRow(data);
+}
+
+export async function deleteLotRecord(lotId: string): Promise<void> {
+  const { error } = await requireSupabase()
+    .from('lots')
+    .delete()
+    .eq('id', lotId);
+  throwIfError(error);
 }
 
 export function subscribeToProductionChanges(

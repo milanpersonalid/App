@@ -15,7 +15,10 @@ import { generateLotStageQrPayload } from '../utils/qrBarcode';
 import { extractImageFingerprint } from '../utils/photoSearch';
 import {
   fetchProductionData,
+  resolveDesignPhotoUrls,
   designFromRow,
+  deleteDesignRecord,
+  deleteLotRecord,
   insertDesign,
   insertKarigar,
   insertLot,
@@ -71,12 +74,15 @@ interface AppContextType {
     arg3?: number | CalibrationTarget
   ) => Promise<void>;
   updateLowStockThreshold: (designId: string, newThreshold: number) => Promise<void>;
+  deleteDesign: (designId: string) => Promise<void>;
+  editDesign: (designId: string, data: { name: string; orderRef: string; lowStockThreshold: number; photoFile?: File }) => Promise<Design>;
   
   createLot: (lotData: {
     lotNumber: string;
     designId: string;
     initialPieces: number;
     initialWeight: number;
+    waxWeightPerPieceUsed?: number;
     orderedQuantity: number;
     karigarId: string;
     jobWorkRate: number;
@@ -85,6 +91,8 @@ interface AppContextType {
     hasDiscrepancy: boolean;
     discrepancyGramsDiff: number;
   }) => Promise<Lot>;
+  deleteLot: (lotId: string) => Promise<void>;
+  editLot: (lotId: string, data: { lotNumber: string; designId: string; karigarId: string; orderedQuantity: number; jobWorkRate: number }) => Promise<Lot>;
   completeWaxReceipt: (
     lotId: string,
     data: {
@@ -93,6 +101,8 @@ interface AppContextType {
       statedPieces: number;
       samplePieceCount?: number;
       sampleWeight?: number;
+      waxWeightPerPieceUsed?: number;
+      estimatedPieces?: number;
     }
   ) => Promise<Lot>;
 
@@ -183,6 +193,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
+  const hydrateDesignPhotos = async (loadedDesigns: Design[]) => {
+    if (loadedDesigns.length === 0) return;
+    try {
+      const photoUrls = await resolveDesignPhotoUrls(loadedDesigns);
+      if (photoUrls.size === 0) return;
+      setDesigns((previous) => previous.map((design) => {
+        const resolvedUrl = design.photoStoragePath ? photoUrls.get(design.photoStoragePath) : undefined;
+        return resolvedUrl ? { ...design, photoUrl: resolvedUrl } : design;
+      }));
+    } catch {
+      // Keep the records visible even if image URL hydration is temporarily slow or fails.
+    }
+  };
+
   const [selectedStageForDetail, setSelectedStageForDetail] = useState<Stage | null>(null);
 
   const refreshData = async () => {
@@ -198,6 +222,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLots(data.lots);
       setKarigars(data.karigars);
       saveProductionSnapshot(data);
+      void hydrateDesignPhotos(data.designs);
       setDataError(null);
     } catch (error) {
       setDataError(error instanceof Error ? error.message : 'Unable to load production data from Supabase.');
@@ -384,8 +409,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       barcode,
       waxAvgWeightPerPiece: waxAvg,
       metalAvgWeightPerPiece: metalEst,
-      plainAvgWeightPerPiece: 0,
-      goldAvgWeightPerPiece: 0,
+      buffAvgWeightPerPiece: 0,
+      zaboraAvgWeightPerPiece: 0,
       fingerprint,
       createdAt: now,
       updatedAt: now,
@@ -430,6 +455,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fieldMap: Record<CalibrationTarget, keyof Design> = {
       wax: 'waxAvgWeightPerPiece',
       metal: 'metalAvgWeightPerPiece',
+      buff: 'buffAvgWeightPerPiece',
+      zabora: 'zaboraAvgWeightPerPiece',
     };
 
     const targetField = fieldMap[target] || 'metalAvgWeightPerPiece';
@@ -453,12 +480,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDesigns((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
   };
 
+  const deleteDesign = async (designId: string): Promise<void> => {
+    const design = designs.find((item) => item.id === designId);
+    if (!design) throw new Error('Design not found.');
+    if (lots.some((lot) => lot.designId === designId)) {
+      throw new Error('This design cannot be deleted while production lots use it. Delete those lots first.');
+    }
+
+    await deleteDesignRecord(designId);
+    setDesigns((previous) => previous.filter((item) => item.id !== designId));
+    if (design.photoStoragePath) {
+      try {
+        await deleteDesignPhoto(design.photoStoragePath);
+      } catch (error) {
+        console.error('Design deleted, but its photo cleanup failed.', error);
+      }
+    }
+  };
+
+  const editDesign = async (designId: string, data: { name: string; orderRef: string; lowStockThreshold: number; photoFile?: File }): Promise<Design> => {
+    const current = designs.find((item) => item.id === designId);
+    if (!current) throw new Error('Design not found.');
+    const duplicate = designs.some((item) => item.id !== designId && item.orderRef.toLowerCase() === data.orderRef.trim().toLowerCase());
+    if (duplicate) throw new Error('That design code is already in use.');
+    let photoStoragePath = current.photoStoragePath;
+    if (data.photoFile) {
+      const uploaded = await uploadDesignPhoto(designId, await compressDesignImage(data.photoFile));
+      photoStoragePath = uploaded;
+    }
+    const saved = await updateDesign({
+      ...current,
+      name: data.name.trim(),
+      orderRef: data.orderRef.trim().toUpperCase(),
+      lowStockThreshold: data.lowStockThreshold,
+      photoStoragePath,
+      photoUrl: photoStoragePath ? current.photoUrl : current.photoUrl,
+      updatedAt: new Date().toISOString().split('T')[0],
+    });
+    setDesigns((previous) => previous.map((item) => item.id === saved.id ? saved : item));
+    if (data.photoFile && current.photoStoragePath && current.photoStoragePath !== photoStoragePath) {
+      try { await deleteDesignPhoto(current.photoStoragePath); } catch (error) { console.warn('Old design photo cleanup failed.', error); }
+    }
+    return saved;
+  };
+
   // CREATE LOT
   const createLot = async (lotData: {
     lotNumber: string;
     designId: string;
     initialPieces: number;
     initialWeight: number;
+    waxWeightPerPieceUsed?: number;
     orderedQuantity: number;
     karigarId: string;
     jobWorkRate: number;
@@ -497,6 +569,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...(lotData.hasWaxReceipt ? {
         dateReceived: now,
         weightReceived: lotData.initialWeight,
+        waxWeightPerPieceUsed: lotData.waxWeightPerPieceUsed,
         estimatedPieces: lotData.initialPieces,
         statedPieces: lotData.statedPieces,
         hasDiscrepancy: lotData.hasDiscrepancy,
@@ -527,6 +600,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return savedLot;
   };
 
+  const deleteLot = async (lotId: string): Promise<void> => {
+    if (!lots.some((item) => item.id === lotId)) throw new Error('Lot not found.');
+    await deleteLotRecord(lotId);
+    setLots((previous) => previous.filter((item) => item.id !== lotId));
+  };
+
+  const editLot = async (lotId: string, data: { lotNumber: string; designId: string; karigarId: string; orderedQuantity: number; jobWorkRate: number }): Promise<Lot> => {
+    const current = lots.find((item) => item.id === lotId);
+    if (!current) throw new Error('Lot not found.');
+    const lotNumber = data.lotNumber.trim().toUpperCase();
+    if (lots.some((item) => item.id !== lotId && item.lotNumber.toUpperCase() === lotNumber)) throw new Error('That lot number is already in use.');
+    const design = designs.find((item) => item.id === data.designId);
+    const karigar = karigars.find((item) => item.id === data.karigarId);
+    if (!design || !karigar) throw new Error('Select a valid design and karigar.');
+    const history = current.history.map((record, index) => {
+      if (index !== current.history.length - 1 && record.stage !== 'Wax') return record;
+      return {
+        ...record,
+        ...(index === current.history.length - 1 ? { karigarId: karigar.id, karigarName: karigar.name, jobWorkRate: data.jobWorkRate, jobWorkAmount: calculateJobWorkAmount(data.jobWorkRate, record.jobWorkRateBasis ?? 'per_piece', record.piecesSent ?? data.orderedQuantity) } : {}),
+        ...(record.stage === 'Wax' ? { orderedQuantity: data.orderedQuantity } : {}),
+      };
+    });
+    const saved = await updateLot({ ...current, lotNumber, designId: design.id, designName: design.name, currentKarigarId: karigar.id, currentKarigarName: karigar.name, history });
+    setLots((previous) => previous.map((item) => item.id === saved.id ? saved : item));
+    return saved;
+  };
+
   const completeWaxReceipt = async (
     lotId: string,
     data: {
@@ -535,6 +635,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       statedPieces: number;
       samplePieceCount?: number;
       sampleWeight?: number;
+      waxWeightPerPieceUsed?: number;
+      estimatedPieces?: number;
     }
   ): Promise<Lot> => {
     const lot = lots.find((item) => item.id === lotId);
@@ -571,9 +673,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDesigns((previous) => previous.map((item) => item.id === savedDesign.id ? savedDesign : item));
     }
 
-    const estimatedPieces = Math.round(data.weightReceived / waxRuler);
+    const receiptRuler = data.waxWeightPerPieceUsed ?? waxRuler;
+    if (!Number.isFinite(receiptRuler) || receiptRuler <= 0) {
+      throw new Error('Enter a valid Wax weight per piece greater than 0.');
+    }
+    const estimatedPieces = data.estimatedPieces ?? Math.round(data.weightReceived / receiptRuler);
+    if (!Number.isInteger(estimatedPieces)) throw new Error('Enter a whole-number Wax piece estimate.');
     if (estimatedPieces <= 0) throw new Error('The estimated Wax piece count could not be calculated.');
-    const discrepancyGrams = Math.abs(data.weightReceived - data.statedPieces * waxRuler);
+    const discrepancyGrams = Math.abs(data.weightReceived - data.statedPieces * receiptRuler);
     const hasDiscrepancy = discrepancyGrams > 2 ||
       Math.abs(estimatedPieces - data.statedPieces) > Math.max(3, estimatedPieces * 0.03);
     const now = new Date().toISOString().split('T')[0];
@@ -584,6 +691,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         orderedQuantity: data.orderedQuantity,
         dateReceived: now,
         weightReceived: data.weightReceived,
+        waxWeightPerPieceUsed: receiptRuler,
         estimatedPieces,
         statedPieces: data.statedPieces,
         hasDiscrepancy,
@@ -762,7 +870,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? Math.round(weightReceived / effectiveRuler)
       : 0;
     const estimatedPieces =
-      typeof entry.estimatedPieces === 'number' && !isNaN(entry.estimatedPieces) && entry.estimatedPieces >= 0
+      stage === 'Chhol'
+        ? (currentRecord.piecesSent ?? lot.initialPieces ?? 0)
+        : typeof entry.estimatedPieces === 'number' && !isNaN(entry.estimatedPieces) && entry.estimatedPieces >= 0
         ? entry.estimatedPieces
         : calculatedEstimatedPieces;
 
@@ -774,8 +884,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : 0;
     const weightDiffGrams = Number(diffGrams.toFixed(2));
     const piecesDiff = Math.abs(estimatedPieces - entry.statedPieces);
-    const hasDiscrepancy = effectiveRuler > 0 &&
-      (diffGrams > 2.0 || piecesDiff > Math.max(3, estimatedPieces * 0.03));
+    const hasDiscrepancy = stage === 'Chhol'
+      ? piecesDiff > Math.max(3, estimatedPieces * 0.03)
+      : effectiveRuler > 0 && (diffGrams > 2.0 || piecesDiff > Math.max(3, estimatedPieces * 0.03));
 
     // 6. Weight loss = Weight sent - Weight received
     const weightLoss = typeof weightSent === 'number' && weightSent > 0
@@ -1136,10 +1247,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateKarigarStages,
         selectedStageForDetail,
         setSelectedStageForDetail,
-        createDesign,
+      createDesign,
+      deleteDesign,
+      editDesign,
         recalibrateDesign,
         updateLowStockThreshold,
-        createLot,
+      createLot,
+      deleteLot,
+      editLot,
         completeWaxReceipt,
         confirmArrival,
         completeStageDataEntry,

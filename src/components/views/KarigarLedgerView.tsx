@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -13,6 +13,10 @@ import { useAuthAndTheme } from '../../context/AuthAndThemeContext';
 import { SearchableSelect } from '../SearchableSelect';
 import { JobWorkRateBasis } from '../../types';
 import { formatJobWorkRate, getStageRateBasis, rateBasisLabel } from '../../utils/stagePricing';
+
+const NativePrint = registerPlugin<{
+  saveCsv: (options: { filename: string; csv: string }) => Promise<{ saved: boolean; location: string }>;
+}>('NativePrint');
 
 type LedgerRow = {
   id: string;
@@ -64,6 +68,8 @@ export const KarigarLedgerView: React.FC = () => {
   const [stageFilter, setStageFilter] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
 
   const allRows = useMemo<LedgerRow[]>(() => lots.flatMap((lot) =>
     lot.history.map((record, index) => ({
@@ -117,6 +123,9 @@ export const KarigarLedgerView: React.FC = () => {
   const selectedKarigar = karigars.find((karigar) => karigar.id === karigarFilter);
 
   const downloadLedger = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportMessage('');
     const headers = [
       'Sent Date', 'Received Date', 'Karigar', 'Lot Number', 'Design', 'Stage', 'Ordered Quantity',
       'Pieces Sent', 'Weight Sent (g)', 'Pieces Received', 'Weight Received (g)',
@@ -150,33 +159,29 @@ export const KarigarLedgerView: React.FC = () => {
     const safeName = (selectedKarigar?.name ?? 'all-karigars').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
     const filename = `karigar-ledger-${safeName}-${new Date().toISOString().slice(0, 10)}.csv`;
     const csv = `\uFEFF${lines.join('\r\n')}`;
-    const file = new File([csv], filename, { type: 'text/csv;charset=utf-8' });
-
-    if (Capacitor.isNativePlatform() && navigator.share) {
-      try {
-        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: 'Karigar Ledger',
-            text: selectedKarigar ? `${selectedKarigar.name} ledger` : 'Complete karigar ledger',
-            files: [file],
-          });
-          return;
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        console.warn('Could not share the ledger file; using browser download instead.', error);
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await NativePrint.saveCsv({ filename, csv });
+        setExportMessage('CSV saved in your phone’s Downloads folder.');
+        return;
       }
-    }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setExportMessage('CSV download started.');
+    } catch (error) {
+      console.error('Could not save the ledger CSV.', error);
+      setExportMessage('CSV could not be saved. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const panelClass = isBright
@@ -197,19 +202,23 @@ export const KarigarLedgerView: React.FC = () => {
         <button
           type="button"
           onClick={downloadLedger}
-          disabled={rows.length === 0}
+          disabled={rows.length === 0 || isExporting}
           className="shrink-0 px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Download className="w-4 h-4" /> CSV
+          <Download className="w-4 h-4" /> {isExporting ? 'Saving…' : 'CSV'}
         </button>
       </div>
+      {exportMessage && (
+        <p className={`text-xs rounded-lg px-3 py-2 ${exportMessage.includes('could not') ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`} role="status">
+          {exportMessage}
+        </p>
+      )}
 
       <div className={`p-3 rounded-xl border space-y-2.5 ${panelClass}`}>
         <SearchableSelect
           value={karigarFilter}
           onChange={setKarigarFilter}
           bright={isBright}
-          searchPlaceholder="Search karigars…"
           className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${isBright ? 'bg-[#F8FAFC] border-[#CBD5E1]' : 'bg-neutral-900 border-neutral-700'}`}
           options={[
             { value: 'all', label: 'All Karigars — Complete Ledger' },
@@ -221,7 +230,6 @@ export const KarigarLedgerView: React.FC = () => {
             value={stageFilter}
             onChange={setStageFilter}
             bright={isBright}
-            searchPlaceholder="Search stages…"
             className={`w-full px-3 py-2 rounded-xl border text-xs outline-none ${isBright ? 'bg-[#F8FAFC] border-[#CBD5E1]' : 'bg-neutral-900 border-neutral-700'}`}
             options={[
               { value: 'all', label: 'All Stages' },

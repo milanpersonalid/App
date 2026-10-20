@@ -120,6 +120,8 @@ const MainApp: React.FC = () => {
   // Creation modals
   const [isCreateDesignOpen, setIsCreateDesignOpen] = useState<boolean>(false);
   const [isCreateLotOpen, setIsCreateLotOpen] = useState<boolean>(false);
+  const [editDesignTarget, setEditDesignTarget] = useState<Design | null>(null);
+  const [editLotTarget, setEditLotTarget] = useState<Lot | null>(null);
   const [preselectedDesignIdForLot, setPreselectedDesignIdForLot] = useState<string | undefined>(
     undefined
   );
@@ -311,6 +313,7 @@ const MainApp: React.FC = () => {
             {activeTab === 'designs' && (
               <DesignsView
                 onOpenCreateDesign={() => setIsCreateDesignOpen(true)}
+                onOpenEditDesign={setEditDesignTarget}
                 onOpenCreateLotWithDesign={handleOpenCreateLotWithDesign}
               />
             )}
@@ -325,6 +328,7 @@ const MainApp: React.FC = () => {
                 onOpenStep6={handleOpenStep6}
                 onOpenStep7={handleOpenStep7}
                 onOpenLot={handleOpenLot}
+                onOpenEditLot={setEditLotTarget}
               />
             )}
 
@@ -457,6 +461,7 @@ const MainApp: React.FC = () => {
       {/* Create Design Modal */}
       {isCreateDesignOpen && (
         <CreateDesignModal
+          editingDesign={undefined}
           onClose={() => setIsCreateDesignOpen(false)}
           onSuccess={() => {
             setIsCreateDesignOpen(false);
@@ -478,6 +483,20 @@ const MainApp: React.FC = () => {
             }
             navigateToTab('lots');
           }}
+        />
+      )}
+      {editDesignTarget && (
+        <CreateDesignModal
+          editingDesign={editDesignTarget}
+          onClose={() => setEditDesignTarget(null)}
+          onSuccess={() => setEditDesignTarget(null)}
+        />
+      )}
+      {editLotTarget && (
+        <CreateLotModal
+          editingLot={editLotTarget}
+          onClose={() => setEditLotTarget(null)}
+          onSuccess={() => setEditLotTarget(null)}
         />
       )}
       </React.Suspense>

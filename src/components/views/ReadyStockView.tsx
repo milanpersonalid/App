@@ -59,12 +59,6 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
     }
   };
 
-  const plainTotalPieces = stockItems.reduce((sum, item) => sum + item.plainPieces, 0);
-  const plainTotalWeight = stockItems.reduce((sum, item) => sum + item.plainWeight, 0);
-
-  const goldTotalPieces = stockItems.reduce((sum, item) => sum + item.goldPieces, 0);
-  const goldTotalWeight = stockItems.reduce((sum, item) => sum + item.goldWeight, 0);
-
   const lowStockCount = stockItems.filter((s) => s.isLowStock).length;
 
   return (
@@ -102,123 +96,6 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
             <span>{lowStockCount} design(s) below minimum stock threshold</span>
           </div>
         )}
-      </div>
-
-      {/* 2 Dedicated Stock Category Buckets */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Bucket 1: Ready Stock (Plain) */}
-        <div
-          onClick={() => setActiveBucket(activeBucket === 'plain' ? 'all' : 'plain')}
-          className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-sm active:scale-[0.99] ${
-            activeBucket === 'plain'
-              ? isBright
-                ? 'bg-[#F1F5F9] border-[#94A3B8] ring-1 ring-[#94A3B8]/40'
-                : 'bg-[#242730] border-[#4B5563] ring-1 ring-white/15'
-              : isBright
-              ? 'bg-[#FFFFFF] border-[#E4E4E7] hover:border-[#CBD5E1]'
-              : 'bg-[#292930] border-[#3F3F46] hover:border-[#52525B]'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1.5">
-            <span
-              className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
-                isBright
-                  ? 'bg-[#E2E8F0] text-[#334155] border-[#CBD5E1]'
-                  : 'bg-[#1E293B] text-[#94A3B8] border-[#334155]'
-              }`}
-            >
-              Plain
-            </span>
-          </div>
-
-          <h3 className={`text-xs font-bold font-brand truncate ${isBright ? 'text-[#1E293B]' : 'text-neutral-100'}`}>
-            Ready (Plain)
-          </h3>
-
-          <div className="mt-2 grid grid-cols-2 gap-1.5 pt-1.5 border-t border-dashed border-[#CBD5E1]/60 dark:border-[#334155]">
-            <div>
-              <span className={`block text-[10px] ${isBright ? 'text-[#64748B]' : 'text-neutral-400'}`}>
-                Pieces
-              </span>
-              <span
-                className={`text-sm font-bold font-mono tracking-tight ${
-                  isBright ? 'text-[#1E293B]' : 'text-neutral-100'
-                }`}
-              >
-                {plainTotalPieces.toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className={`block text-[10px] ${isBright ? 'text-[#64748B]' : 'text-neutral-400'}`}>
-                Weight
-              </span>
-              <span
-                className={`text-sm font-bold font-mono tracking-tight ${
-                  isBright ? 'text-[#334155]' : 'text-neutral-200'
-                }`}
-              >
-                {(plainTotalWeight || 0).toFixed(1)}g
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bucket 2: Ready Stock (Gold) */}
-        <div
-          onClick={() => setActiveBucket(activeBucket === 'gold' ? 'all' : 'gold')}
-          className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-sm active:scale-[0.99] ${
-            activeBucket === 'gold'
-              ? isBright
-                ? 'bg-[#FAF7F2] border-[#D6C7B2] ring-1 ring-[#D6C7B2]/50'
-                : 'bg-[#2B2721] border-[#5E4C33] ring-1 ring-[#D4B98E]/20'
-              : isBright
-              ? 'bg-[#FFFFFF] border-[#E4E4E7] hover:border-[#D6C7B2]'
-              : 'bg-[#292930] border-[#3F3F46] hover:border-[#52525B]'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-1.5">
-            <span
-              className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
-                isBright
-                  ? 'bg-[#F2EAE0] text-[#6B5330] border-[#DECFC0]'
-                  : 'bg-[#332A1F] text-[#D4B98E] border-[#4A3D2D]'
-              }`}
-            >
-              Gold
-            </span>
-          </div>
-
-          <h3 className={`text-xs font-bold font-brand truncate ${isBright ? 'text-[#3D2F1B]' : 'text-neutral-100'}`}>
-            Ready (Gold)
-          </h3>
-
-          <div className="mt-2 grid grid-cols-2 gap-1.5 pt-1.5 border-t border-dashed border-[#DECFC0]/70 dark:border-[#4A3D2D]">
-            <div>
-              <span className={`block text-[10px] ${isBright ? 'text-[#786E64]' : 'text-neutral-400'}`}>
-                Pieces
-              </span>
-              <span
-                className={`text-sm font-bold font-mono tracking-tight ${
-                  isBright ? 'text-[#3D2F1B]' : 'text-neutral-100'
-                }`}
-              >
-                {goldTotalPieces.toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className={`block text-[10px] ${isBright ? 'text-[#786E64]' : 'text-neutral-400'}`}>
-                Weight
-              </span>
-              <span
-                className={`text-sm font-bold font-mono tracking-tight ${
-                  isBright ? 'text-[#3D2F1B]' : 'text-amber-300'
-                }`}
-              >
-                {(goldTotalWeight || 0).toFixed(1)}g
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
@@ -280,7 +157,6 @@ export const ReadyStockView: React.FC<ReadyStockViewProps> = ({ onOpenLot }) => 
           />
           <input
             type="text"
-            placeholder="Search design or barcode..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`w-full pl-9 pr-3.5 py-1.5 rounded-xl text-xs outline-none transition-all border ${

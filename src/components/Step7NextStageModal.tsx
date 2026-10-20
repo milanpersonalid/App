@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lot, Stage, BranchType, NEXT_STAGE_OPTIONS } from '../types';
 import { calculateJobWorkAmount, getStageRateBasis, rateBasisLabel, rateUnitLabel } from '../utils/stagePricing';
 import { useApp } from '../context/AppContext';
+import { useAuthAndTheme } from '../context/AuthAndThemeContext';
 import { SearchableSelect } from './SearchableSelect';
 import { ArrowRight, Sparkles, X, ShieldAlert, Printer } from 'lucide-react';
 
@@ -17,6 +18,8 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
   onSuccess,
 }) => {
   const { advanceToNextStage, karigars } = useApp();
+  const { theme } = useAuthAndTheme();
+  const isBright = theme === 'bright';
 
   const isAtChhol = lot.currentStage === 'Chhol';
   const isAtPlating = lot.currentStage === 'Plating';
@@ -181,6 +184,7 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
 
             <SearchableSelect
               value={selectedOption ? `${selectedOption.stage}|${selectedOption.branch}` : ''}
+              bright={isBright}
               onChange={(value) => {
                 const option = availableStages.find(
                   (item) => `${item.stage}|${item.branch}` === value
@@ -189,8 +193,7 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
                 setSelectedKarigarId('');
                 setJobWorkRate('');
               }}
-              searchPlaceholder="Search destinations…"
-              className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-sm focus:border-amber-500 outline-none"
+              className={`w-full px-4 py-3 rounded-xl border text-sm focus:border-amber-500 outline-none ${isBright ? 'bg-white border-slate-300 text-slate-900' : 'bg-neutral-950 border-neutral-700 text-neutral-100'}`}
               options={availableStages.map((option) => ({
                 value: `${option.stage}|${option.branch}`,
                 label: option.label,
@@ -210,10 +213,9 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
               <SearchableSelect
                 disabled={filteredKarigars.length === 0}
                 value={selectedKarigarId}
+                bright={isBright}
                 onChange={setSelectedKarigarId}
-                placeholder={filteredKarigars.length ? 'Select a stage specialist...' : `No karigars assigned to ${selectedOption?.stage ?? 'this stage'}`}
-                searchPlaceholder="Search karigars…"
-                className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-sm focus:border-amber-500 outline-none"
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm focus:border-amber-500 outline-none ${isBright ? 'bg-white border-slate-300 text-slate-900' : 'bg-neutral-950 border-neutral-700 text-neutral-100'}`}
                 options={filteredKarigars.map((k) => ({
                   value: k.id,
                   label: `${k.name}${k.phone ? ` (${k.phone})` : ''} • Specialties: ${k.specialtyStages.join(', ')}`,
@@ -233,7 +235,6 @@ export const Step7NextStageModal: React.FC<Step7NextStageModalProps> = ({
                   step="0.01"
                   value={jobWorkRate}
                   onChange={(event) => setJobWorkRate(event.target.value)}
-                  placeholder={selectedRateBasis === 'per_kg' ? 'Example: 200 per kg' : selectedRateBasis === 'per_piece' ? 'Example: 2.50 per piece' : 'Total job-work amount'}
                   className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 font-mono text-sm focus:border-amber-500 outline-none"
                 />
                 <p className="mt-1 text-[11px] text-neutral-500">

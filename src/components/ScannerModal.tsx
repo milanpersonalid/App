@@ -542,63 +542,24 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
           )}
         </div>
 
-        {/* CAMERA / VIEWFINDER CONTAINER */}
         <div className="p-5 space-y-4">
-          <div
-            className={`relative aspect-video max-h-56 w-full rounded-xl overflow-hidden flex items-center justify-center border transition-colors ${
-              isBright ? 'bg-slate-900 border-slate-300' : 'bg-neutral-950 border-neutral-800'
-            }`}
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={hasCamera ? 'absolute inset-0 w-full h-full object-cover' : 'hidden'}
-            />
-            {!hasCamera && (
-              <div className="text-center p-4">
-                <Camera className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
-                <p className="text-xs text-neutral-400 max-w-xs">
-                  {cameraError || (isNative
-                    ? mode === 'photo_search'
-                      ? 'Tap Take Photo to open the device camera.'
-                      : 'Tap Scan QR / Barcode to open the scanner.'
-                    : 'Camera inactive')}
-                </p>
-              </div>
-            )}
-
-            {/* Target Reticle Overlay */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div
-                className={`w-48 h-36 border-2 rounded-xl transition-all ${
-                  mode === 'confirm_arrival'
-                    ? 'border-red-400/80 border-dashed animate-pulse'
-                    : mode === 'look_up'
-                    ? 'border-amber-400/80'
-                    : 'border-blue-400/80'
-                }`}
-              />
+          <video ref={videoRef} autoPlay playsInline muted className="hidden" />
+          {/* Photo search actions remain available without the camera placeholder panel. */}
+          {mode === 'photo_search' && (
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={captureSnapshot}
+                disabled={isNative ? isTakingPhoto : !hasCamera}
+                className="px-4 py-2 rounded-full bg-blue-500 hover:bg-blue-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition disabled:opacity-50"
+              >
+                <Camera className="w-4 h-4" /> {isTakingPhoto ? 'Opening Camera…' : isNative ? 'Take Photo' : 'Snap Photo'}
+              </button>
+              <label className="px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition">
+                <Upload className="w-4 h-4" /> Upload Image
+                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              </label>
             </div>
-
-            {/* Photo Search Capture trigger button */}
-            {mode === 'photo_search' && (
-              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
-                <button
-                  onClick={captureSnapshot}
-                  disabled={isNative ? isTakingPhoto : !hasCamera}
-                  className="px-4 py-2 rounded-full bg-blue-500 hover:bg-blue-400 text-neutral-950 font-bold text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition disabled:opacity-50"
-                >
-                  <Camera className="w-4 h-4" /> {isTakingPhoto ? 'Opening Camera…' : isNative ? 'Take Photo' : 'Snap Photo'}
-                </button>
-                <label className="px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-100 font-bold text-xs flex items-center gap-1.5 shadow-lg cursor-pointer active:scale-95 transition">
-                  <Upload className="w-4 h-4" /> Upload Image
-                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                </label>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Quick active lots or barcode simulator for easy instant testing */}
           {(mode === 'confirm_arrival' || mode === 'look_up') && (
@@ -619,11 +580,6 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={
-                    mode === 'confirm_arrival'
-                      ? 'Scan or enter Lot # (e.g. LOT-901, LOT-902)...'
-                      : 'Scan or enter Design Barcode (e.g. DES-108501) or Lot #...'
-                  }
                   value={manualCodeInput}
                   onChange={(e) => setManualCodeInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -812,6 +768,16 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                                 isBright ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                               }`}>
                                 Metal: {d.metalAvgWeightPerPiece}g
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded border ${
+                                isBright ? 'bg-purple-50 text-purple-900 border-purple-200' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                              }`}>
+                                Buff: {d.buffAvgWeightPerPiece}g
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded border ${
+                                isBright ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              }`}>
+                                Zabora: {d.zaboraAvgWeightPerPiece}g
                               </span>
                             </div>
                             {onSelectDesign && (
